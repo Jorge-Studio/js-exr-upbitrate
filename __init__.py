@@ -26,6 +26,13 @@ try:
 except ImportError:
     _HAS_CV2 = False
 
+try:
+    import OpenEXR
+    import Imath
+    _HAS_OPENEXR = True
+except ImportError:
+    _HAS_OPENEXR = False
+
 
 # --- sRGB <-> linear (for HDR / correct EXR) ---
 def _srgb_to_linear(x: torch.Tensor) -> torch.Tensor:
@@ -55,16 +62,49 @@ def _find_ffmpeg() -> Optional[str]:
     return shutil.which("ffmpeg")
 
 
-def _write_exr(filepath: str, data: "np.ndarray", compression: str = "zip") -> None:
-    """Write float32/float16 array as EXR."""
-    if data.dtype == "float16":
-        data_f32 = data.astype("float32")
-        request_16bit = True
-    else:
-        data_f32 = np.ascontiguousarray(data.astype("float32"))
-        request_16bit = False
-
-    # OpenCV: most reliable for EXR
+def _write_exr(filepath: str, data: "np.ndarray", compression: str = "zip", bit_depth: str = "32") -> None:
+    """Write float32/float16 array as EXR with proper bit depth control."""
+    
+    # Ensure float32 for processing
+    data_f32 = np.ascontiguousarray(data.astype("float32"))
+    request_16bit = (bit_depth == "16")
+    
+    # OpenEXR library: best for true 32-bit support
+    if _HAS_OPENEXR:
+        try:
+            h, w, c = data_f32.shape
+            
+            # Set up header
+            header = OpenEXR.Header(w, h)
+            
+            # Pixel type
+            if request_16bit:
+                pixel_type = Imath.PixelType(Imath.PixelType.HALF)
+                r_data = data_f32[:, :, 0].astype('float16').tobytes()
+                g_data = data_f32[:, :, 1].astype('float16').tobytes()
+                b_data = data_f32[:, :, 2].astype('float16').tobytes()
+            else:
+                pixel_type = Imath.PixelType(Imath.PixelType.FLOAT)
+                r_data = data_f32[:, :, 0].tobytes()
+                g_data = data_f32[:, :, 1].tobytes()
+                b_data = data_f32[:, :, 2].tobytes()
+            
+            # Set channel info
+            header['channels'] = {
+                'R': Imath.Channel(pixel_type),
+                'G': Imath.Channel(pixel_type),
+                'B': Imath.Channel(pixel_type),
+            }
+            
+            # Write file
+            out = OpenEXR.OutputFile(filepath, header)
+            out.writePixels({'R': r_data, 'G': g_data, 'B': b_data})
+            out.close()
+            return
+        except Exception as e:
+            print(f"OpenEXR write failed: {e}, trying fallback...")
+    
+    # OpenCV fallback
     if _HAS_CV2:
         try:
             bgr = cv2.cvtColor(data_f32, cv2.COLOR_RGB2BGR)
@@ -93,17 +133,15 @@ def _write_exr(filepath: str, data: "np.ndarray", compression: str = "zip") -> N
         except Exception:
             pass
 
-    # imageio fallback
-    if not _HAS_IMAGEIO:
-        raise RuntimeError(
-            "SaveImageEXR: No EXR backend available. Install opencv-python or imageio."
-        )
-    try:
-        imageio.imwrite(filepath, data_f32 if data.dtype != "float16" else data)
-        return
-    except Exception:
-        pass
-    raise RuntimeError("Could not write EXR. Install opencv-python for EXR support.")
+    # imageio fallback (may convert 32-bit to 16-bit)
+    if _HAS_IMAGEIO:
+        try:
+            imageio.imwrite(filepath, data_f32)
+            return
+        except Exception:
+            pass
+    
+    raise RuntimeError("Could not write EXR. Install: pip install openexr imath")
 
 
 # ---------------------------------------------------------------------------
@@ -179,10 +217,8 @@ class SaveImageEXR:
         os.makedirs(full_output_folder, exist_ok=True)
         
         data = img.clamp(0.0, None).float().cpu().numpy()
-        if bit_depth == "16":
-            data = data.astype("float16")
         
-        _write_exr(filepath, data, compression)
+        _write_exr(filepath, data, compression, bit_depth)
         
         return {"ui": {"images": [{"filename": os.path.basename(filepath), "subfolder": subfolder, "type": "output"}]}, 
                 "result": (image,)}
@@ -225,10 +261,8 @@ class SaveVideoEXRSequence:
         results = []
         for i in range(images.shape[0]):
             frame = images[i].clamp(0.0, None).float().cpu().numpy()
-            if bit_depth == "16":
-                frame = frame.astype("float16")
             path = os.path.join(full_output_folder, f"{filename}_{counter:05d}_{i:06d}.exr")
-            _write_exr(path, frame, compression)
+            _write_exr(path, frame, compression, bit_depth)
             results.append({"filename": os.path.basename(path), "subfolder": subfolder, "type": "output"})
         
         return {"ui": {"images": results}, "result": (images,)}
