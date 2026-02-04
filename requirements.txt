@@ -1,0 +1,4 @@
+# Required for EXR image/sequence and optional for best ProRes pipeline
+imageio>=2.31.0
+# Optional: for PrepareImageHighBitDepth debanding (bilateral filter)
+opencv-python>=4.8.0
