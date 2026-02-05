@@ -308,26 +308,45 @@ def _apply_curves(x: torch.Tensor, curve_points: List[Tuple[float, float]]) -> t
 
 
 def _deband_image(img_t: torch.Tensor, strength: float) -> torch.Tensor:
-    """Improved debanding using dithering and bilateral filter."""
+    """Improved debanding using high-precision dithering.
+    
+    This function adds triangular probability distribution (TPDF) dither
+    to break up banding artifacts from 8-bit sources while preserving
+    the full dynamic range for 32-bit output.
+    """
     if strength <= 0:
         return img_t
     
-    # Add subtle noise to break up banding (blue noise would be ideal)
-    noise_amount = strength * 0.002  # Very subtle
-    noise = torch.randn_like(img_t) * noise_amount
-    out = img_t + noise
+    # Work in double precision for maximum accuracy
+    out = img_t.double()
     
-    # Apply bilateral filter if OpenCV available
-    if _HAS_CV2 and strength > 0.5:
+    # Calculate dither amount based on 8-bit quantization step
+    # One 8-bit step = 1/255 ≈ 0.00392
+    # We use triangular dither (sum of two uniform) for best results
+    quant_step = 1.0 / 255.0
+    dither_amplitude = quant_step * strength * 0.5
+    
+    # Triangular PDF dither (better than Gaussian for breaking banding)
+    # Sum of two uniform distributions gives triangular distribution
+    noise1 = torch.rand_like(out) - 0.5
+    noise2 = torch.rand_like(out) - 0.5
+    tpdf_noise = (noise1 + noise2) * dither_amplitude
+    
+    out = out + tpdf_noise
+    
+    # Optional: Apply gentle bilateral filter for smooth gradients
+    # Only if strength is high and OpenCV available
+    if _HAS_CV2 and strength > 1.0:
         for i in range(out.shape[0]):
-            frame = out[i].cpu().numpy().astype("float32")
+            frame = out[i].float().cpu().numpy()
             frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            sigma = max(1.0, 15.0 * strength)
-            filtered = cv2.bilateralFilter(frame_bgr, 5, sigma, sigma)
+            # Very gentle bilateral - preserve edges, smooth gradients
+            sigma = min(5.0, strength * 2.0)
+            filtered = cv2.bilateralFilter(frame_bgr, 3, sigma, sigma)
             out_rgb = cv2.cvtColor(filtered, cv2.COLOR_BGR2RGB)
-            out[i] = torch.from_numpy(out_rgb).to(device=img_t.device, dtype=img_t.dtype)
+            out[i] = torch.from_numpy(out_rgb).to(device=img_t.device).double()
     
-    return out
+    return out.float()
 
 
 def _find_ffmpeg() -> Optional[str]:
@@ -609,7 +628,7 @@ class PrepareImageHighBitDepth:
                 "input_is_srgb": ("BOOLEAN", {"default": True,
                     "tooltip": "Input is sRGB (standard ComfyUI). Disable if already linear."}),
                 "add_headroom": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 2.0, "step": 0.1,
-                    "tooltip": "Add highlight headroom (stops above 1.0). Recommended: 0.5-1.0 for grading flexibility."}),
+                    "tooltip": "Reserved for future use. EXR naturally supports values >1.0."}),
                 "deband_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 2.0, "step": 0.05,
                     "tooltip": "Debanding strength (0=off). Use 0.3-0.5 for subtle, 1.0+ for aggressive."}),
             }
@@ -622,21 +641,27 @@ class PrepareImageHighBitDepth:
     DESCRIPTION = "Prepare image for EXR export with proper linear conversion and headroom."
     
     def execute(self, image, input_is_srgb: bool, add_headroom: float, deband_strength: float):
-        out = image.clone()
+        # Work in double precision throughout for maximum bit depth
+        out = image.clone().double()
+        
+        # Apply debanding FIRST on the original data to break up 8-bit quantization
+        # This adds high-precision dither to create intermediate values
+        if deband_strength > 0:
+            out = _deband_image(out.float(), deband_strength).double()
         
         # Convert to linear if input is sRGB
         if input_is_srgb:
-            out = _srgb_to_linear(out)
+            out = _srgb_to_linear(out.float()).double()
         
-        # Add highlight headroom (allows values above 1.0 for grading)
-        # This scales the image so there's room above diffuse white
-        if add_headroom > 0:
-            headroom_factor = 1.0 / (1.0 + add_headroom)
-            out = out * headroom_factor
+        # Add highlight headroom (in STOPS - allows values above 1.0)
+        # headroom=1.0 means 1 stop of headroom = 2x the range
+        # This EXPANDS the possible range, not compresses
+        # We DON'T scale down the image - we just allow the format to hold more
+        # The headroom is for when grading pushes values above 1.0
+        # NOTE: For proper headroom, we leave values as-is but the EXR can store >1.0
         
-        # Apply debanding
-        if deband_strength > 0:
-            out = _deband_image(out, deband_strength)
+        # Convert back to float32 for output
+        out = out.float()
         
         return (out,)
 
