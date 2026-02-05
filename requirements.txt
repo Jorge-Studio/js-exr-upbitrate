@@ -1,7 +1,9 @@
 # Required for true 32-bit EXR support
 openexr>=3.2.0
 imath>=3.1.0
+
 # Fallback for EXR writing
 imageio>=2.31.0
-# Optional: for PrepareImageHighBitDepth debanding (bilateral filter)
+
+# Optional: for debanding and bilateral filter
 opencv-python>=4.8.0
