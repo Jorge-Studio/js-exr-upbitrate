@@ -1,6 +1,18 @@
 # High Bit Depth EXR Export for ComfyUI (v2.0)
 
-Professional-grade EXR export with **Log format support**, **color grading controls**, and **maximum tonal precision** for VFX, compositing, and color grading workflows.
+Professional-grade EXR export with **Log format support**, **color grading controls**, **auto color matching**, and **maximum tonal precision** for VFX, compositing, and color grading workflows.
+
+---
+
+## Quick Start - Ultimate Workflow
+
+**The fastest way to get the best results:**
+
+1. Install the node (see Installation below)
+2. Load the included workflow: `workflows/ultimate_exr_workflow.json`
+3. Select your image and run!
+
+This workflow uses all 9 nodes in the optimal configuration for professional output.
 
 ---
 
@@ -8,8 +20,10 @@ Professional-grade EXR export with **Log format support**, **color grading contr
 
 - **Log Format Export**: ARRI LogC3, Sony S-Log3, Panasonic V-Log, Canon Log 3, RED Log3G10, DaVinci Intermediate
 - **Color Space Converter**: Convert between sRGB, Linear, and Log formats
-- **Color Grading Controller**: Professional lift/gamma/gain, exposure, contrast, saturation
-- **HDR Curve Editor**: Lightroom-style shadows/midtones/highlights controls
+- **Color Grading Controller**: Professional lift/gamma/gain, exposure, contrast, saturation with **live preview**
+- **HDR Curve Editor**: Lightroom-style shadows/midtones/highlights controls with **interactive curve display**
+- **Color Match to Reference**: Automatically match processed image to original (prevents dark/shifted outputs)
+- **Auto Exposure Match**: Quick brightness matching with exposure stop readout
 - **Image Stats**: Verify range, unique values, and effective bit depth
 - **Improved Precision**: Up to 42,000+ unique values vs ~4,000 in v1
 
@@ -26,21 +40,64 @@ pip install openexr imath imageio opencv-python
 
 ---
 
-## Nodes Included
+## Nodes Included (9 Total)
 
 | Node | Description |
 |------|-------------|
-| **Color Space Converter** | Convert between sRGB, Linear, and Log formats |
-| **Color Grading Controller** | Exposure, contrast, lift/gamma/gain, saturation |
-| **HDR Curve Editor** | Shadows, midtones, highlights, whites, blacks |
 | **Prepare Image High Bit Depth** | sRGB→Linear + headroom + debanding |
+| **Color Grading Controller** | Exposure, contrast, lift/gamma/gain, saturation (with live preview) |
+| **HDR Curve Editor** | Shadows, midtones, highlights, whites, blacks (with curve display) |
+| **Color Match to Reference** | Auto-match processed image colors/brightness to original |
+| **Auto Exposure Match** | Quick exposure-only matching with stop readout |
+| **Color Space Converter** | Convert between sRGB, Linear, and Log formats |
 | **Save Image EXR** | Export single image as 16/32-bit EXR with Log format |
 | **Save Video EXR Sequence** | Export video as EXR sequence with Log format |
 | **Image Stats** | Display range, unique values, bit depth estimate |
 
 ---
 
-## Recommended Workflow for Professional Output
+## Ultimate Workflow (Recommended)
+
+Load `workflows/ultimate_exr_workflow.json` for the complete pipeline:
+
+```
+1. LOAD IMAGE ─────────────────────────────────────────────────────────┐
+       │                                                               │
+       ↓                                                               │
+2. PREPARE (sRGB→Linear + 0.5 stop headroom + subtle deband)           │
+       │                                                               │
+       ↓                                                               │
+3. COLOR GRADING (exposure, contrast, lift/gamma/gain, saturation)     │
+       │      [Live preview updates as you adjust!]                    │
+       ↓                                                               │
+4. HDR CURVES (fine-tune shadows, midtones, highlights)                │
+       │      [Interactive curve visualization!]                       │
+       ↓                                                               │
+5. COLOR MATCH TO REFERENCE ←──────────────────────────────────────────┘
+       │      (auto-matches brightness/contrast/colors to original)
+       │      [Prevents dark or color-shifted outputs!]
+       ↓
+6. IMAGE STATS (verify quality metrics before export)
+       │
+       ↓
+7. SAVE EXR (32-bit, ARRI LogC3, ZIP compression)
+       │
+       ├──→ 8. COLOR SPACE CONVERTER (Linear→sRGB) → PREVIEW
+       │
+       └──→ 9. AUTO EXPOSURE MATCH (alternative comparison)
+```
+
+### Why This Workflow Works Best
+
+1. **Headroom**: 0.5 stops of highlight headroom gives colorists room to work
+2. **Auto Color Match**: Ensures your graded image stays true to the original's brightness/colors
+3. **Live Previews**: See changes before running the full workflow
+4. **Quality Verification**: Image Stats confirms you're getting maximum precision
+5. **Industry Standard Output**: 32-bit ARRI LogC3 works with any professional software
+
+---
+
+## Other Recommended Workflows
 
 ### For Color Grading (Matching Camera Footage)
 
