@@ -1,0 +1,112 @@
+{
+  "last_node_id": 6,
+  "last_link_id": 6,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [50, 300],
+      "size": [315, 314],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [1, 5], "slot_index": 0},
+        {"name": "MASK", "type": "MASK", "links": null}
+      ],
+      "properties": {"Node name for S&R": "LoadImage"},
+      "widgets_values": ["example.png"],
+      "title": "1. Load Image"
+    },
+    {
+      "id": 2,
+      "type": "PrepareImageHighBitDepth",
+      "pos": [420, 300],
+      "size": [315, 150],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
+      "outputs": [{"name": "image", "type": "IMAGE", "links": [2], "slot_index": 0}],
+      "properties": {"Node name for S&R": "PrepareImageHighBitDepth"},
+      "widgets_values": [true, 0.0, 0.0],
+      "title": "2. Prepare (sRGB->Linear, NO headroom, NO deband)"
+    },
+    {
+      "id": 3,
+      "type": "SaveImageEXR",
+      "pos": [790, 300],
+      "size": [315, 200],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 2}],
+      "outputs": [{"name": "image", "type": "IMAGE", "links": [3], "slot_index": 0}],
+      "properties": {"Node name for S&R": "SaveImageEXR"},
+      "widgets_values": ["test_good", "32", "zip", "Linear", true],
+      "title": "3. Save 32-bit LINEAR EXR"
+    },
+    {
+      "id": 4,
+      "type": "ColorSpaceConverter",
+      "pos": [1160, 300],
+      "size": [280, 120],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 3}],
+      "outputs": [{"name": "image", "type": "IMAGE", "links": [4], "slot_index": 0}],
+      "properties": {"Node name for S&R": "ColorSpaceConverter"},
+      "widgets_values": ["Linear", "sRGB"],
+      "title": "4. Convert for Preview"
+    },
+    {
+      "id": 5,
+      "type": "PreviewImage",
+      "pos": [1160, 480],
+      "size": [350, 300],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 4}],
+      "outputs": [],
+      "title": "Output Preview",
+      "properties": {"Node name for S&R": "PreviewImage"},
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 6,
+      "type": "PreviewImage",
+      "pos": [50, 650],
+      "size": [315, 280],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 5}],
+      "outputs": [],
+      "title": "Original",
+      "properties": {"Node name for S&R": "PreviewImage"},
+      "color": "#223",
+      "bgcolor": "#335"
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"],
+    [3, 3, 0, 4, 0, "IMAGE"],
+    [4, 4, 0, 5, 0, "IMAGE"],
+    [5, 1, 0, 6, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "TEST: Simple Linear EXR (No Color Matching)",
+      "bounding": [40, 250, 1500, 350],
+      "color": "#2E8B57"
+    }
+  ],
+  "config": {},
+  "extra": {"ds": {"scale": 0.6, "offset": [50, 50]}},
+  "version": 0.4
+}
