@@ -851,6 +851,212 @@ Shape: {image.shape}"""
 
 
 # =============================================================================
+# NODE: Auto Color Match to Reference
+# =============================================================================
+class ColorMatchToReference:
+    """Automatically match processed image colors/brightness to reference (original) image."""
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "processed_image": ("IMAGE",),
+                "reference_image": ("IMAGE",),
+                "match_luminance": ("BOOLEAN", {"default": True,
+                    "tooltip": "Match overall brightness levels"}),
+                "match_contrast": ("BOOLEAN", {"default": True,
+                    "tooltip": "Match contrast/dynamic range"}),
+                "match_colors": ("BOOLEAN", {"default": True,
+                    "tooltip": "Match color balance (RGB channels)"}),
+                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.05,
+                    "tooltip": "Blend strength (0=no change, 1=full match)"}),
+            },
+            "optional": {
+                "preserve_hdr_headroom": ("BOOLEAN", {"default": True,
+                    "tooltip": "Preserve values above 1.0 for HDR"}),
+            }
+        }
+    
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "execute"
+    CATEGORY = "image/color"
+    DESCRIPTION = "Match processed image colors/brightness to reference image. Prevents dark/shifted outputs."
+    
+    def execute(self, processed_image, reference_image, 
+                match_luminance: bool, match_contrast: bool, match_colors: bool,
+                strength: float, preserve_hdr_headroom: bool = True):
+        
+        if strength == 0:
+            return (processed_image,)
+        
+        proc = processed_image.clone()
+        ref = reference_image.clone()
+        
+        # Work on first frame of each
+        proc_frame = proc[0].float()
+        ref_frame = ref[0].float()
+        
+        # Store HDR values (above 1.0) to restore later
+        if preserve_hdr_headroom:
+            hdr_mask = proc_frame > 1.0
+            hdr_values = proc_frame.clone()
+        
+        # Calculate statistics for reference
+        ref_mean = ref_frame.mean(dim=(0, 1))  # Mean per channel
+        ref_std = ref_frame.std(dim=(0, 1))    # Std per channel
+        ref_luminance = (0.2126 * ref_frame[..., 0] + 0.7152 * ref_frame[..., 1] + 0.0722 * ref_frame[..., 2])
+        ref_lum_mean = ref_luminance.mean()
+        ref_lum_std = ref_luminance.std()
+        
+        # Calculate statistics for processed
+        proc_mean = proc_frame.mean(dim=(0, 1))
+        proc_std = proc_frame.std(dim=(0, 1))
+        proc_luminance = (0.2126 * proc_frame[..., 0] + 0.7152 * proc_frame[..., 1] + 0.0722 * proc_frame[..., 2])
+        proc_lum_mean = proc_luminance.mean()
+        proc_lum_std = proc_luminance.std()
+        
+        result = proc_frame.clone()
+        
+        # Match luminance (overall brightness)
+        if match_luminance:
+            # Shift to match reference mean brightness
+            lum_shift = ref_lum_mean - proc_lum_mean
+            result = result + lum_shift
+        
+        # Match contrast (dynamic range)
+        if match_contrast and proc_lum_std > 0.001:
+            # Scale to match reference contrast
+            contrast_scale = ref_lum_std / (proc_lum_std + 1e-6)
+            # Apply around the mean
+            current_mean = result.mean(dim=(0, 1), keepdim=True)
+            result = (result - current_mean) * contrast_scale + current_mean
+        
+        # Match colors (per-channel)
+        if match_colors:
+            for c in range(3):
+                if proc_std[c] > 0.001:
+                    # Normalize then scale to reference distribution
+                    channel = result[..., c]
+                    channel_mean = channel.mean()
+                    channel_std = channel.std()
+                    
+                    # Standardize
+                    normalized = (channel - channel_mean) / (channel_std + 1e-6)
+                    # Apply reference statistics
+                    matched = normalized * ref_std[c] + ref_mean[c]
+                    result[..., c] = matched
+        
+        # Blend with original based on strength
+        if strength < 1.0:
+            result = proc_frame * (1 - strength) + result * strength
+        
+        # Restore HDR headroom
+        if preserve_hdr_headroom:
+            # Keep values that were above 1.0 in the original processed image
+            result = torch.where(hdr_mask, hdr_values, result)
+        
+        # Ensure no negative values
+        result = result.clamp(min=0.0)
+        
+        # Apply to all frames
+        out = proc.clone()
+        out[0] = result
+        
+        # If multiple frames, apply same transform to all
+        if proc.shape[0] > 1:
+            for i in range(1, proc.shape[0]):
+                frame = proc[i].float()
+                
+                if match_luminance:
+                    frame = frame + lum_shift
+                
+                if match_contrast and proc_lum_std > 0.001:
+                    current_mean = frame.mean(dim=(0, 1), keepdim=True)
+                    frame = (frame - current_mean) * contrast_scale + current_mean
+                
+                if match_colors:
+                    for c in range(3):
+                        if proc_std[c] > 0.001:
+                            channel = frame[..., c]
+                            channel_mean = channel.mean()
+                            channel_std = channel.std()
+                            normalized = (channel - channel_mean) / (channel_std + 1e-6)
+                            frame[..., c] = normalized * ref_std[c] + ref_mean[c]
+                
+                if strength < 1.0:
+                    frame = proc[i].float() * (1 - strength) + frame * strength
+                
+                frame = frame.clamp(min=0.0)
+                out[i] = frame
+        
+        return (out,)
+
+
+# =============================================================================
+# NODE: Auto Exposure Match
+# =============================================================================
+class AutoExposureMatch:
+    """Automatically adjust exposure to match reference image brightness."""
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "reference": ("IMAGE",),
+                "method": (["mean", "median", "highlights", "shadows"], {"default": "mean",
+                    "tooltip": "What to match: mean brightness, median, highlights, or shadows"}),
+            }
+        }
+    
+    RETURN_TYPES = ("IMAGE", "FLOAT",)
+    RETURN_NAMES = ("image", "exposure_adjustment",)
+    FUNCTION = "execute"
+    CATEGORY = "image/color"
+    DESCRIPTION = "Auto-adjust exposure to match reference brightness. Returns adjustment in stops."
+    
+    def execute(self, image, reference, method: str):
+        img = image.clone()
+        ref = reference[0].float()
+        
+        # Calculate luminance
+        ref_lum = 0.2126 * ref[..., 0] + 0.7152 * ref[..., 1] + 0.0722 * ref[..., 2]
+        
+        for i in range(img.shape[0]):
+            frame = img[i].float()
+            frame_lum = 0.2126 * frame[..., 0] + 0.7152 * frame[..., 1] + 0.0722 * frame[..., 2]
+            
+            if method == "mean":
+                ref_val = ref_lum.mean()
+                frame_val = frame_lum.mean()
+            elif method == "median":
+                ref_val = ref_lum.median()
+                frame_val = frame_lum.median()
+            elif method == "highlights":
+                # Top 10% of values
+                ref_val = ref_lum.quantile(0.9)
+                frame_val = frame_lum.quantile(0.9)
+            else:  # shadows
+                # Bottom 10% of values
+                ref_val = ref_lum.quantile(0.1)
+                frame_val = frame_lum.quantile(0.1)
+            
+            # Calculate multiplier
+            if frame_val > 0.001:
+                multiplier = ref_val / frame_val
+                img[i] = frame * multiplier
+        
+        # Calculate exposure adjustment in stops
+        if frame_val > 0.001:
+            exposure_stops = float(math.log2(multiplier))
+        else:
+            exposure_stops = 0.0
+        
+        return (img, exposure_stops)
+
+
+# =============================================================================
 # NODE MAPPINGS
 # =============================================================================
 NODE_CLASS_MAPPINGS = {
@@ -861,6 +1067,8 @@ NODE_CLASS_MAPPINGS = {
     "SaveImageEXR": SaveImageEXR,
     "SaveVideoEXRSequence": SaveVideoEXRSequence,
     "ImageStats": ImageStats,
+    "ColorMatchToReference": ColorMatchToReference,
+    "AutoExposureMatch": AutoExposureMatch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -871,6 +1079,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SaveImageEXR": "Save Image EXR",
     "SaveVideoEXRSequence": "Save Video EXR Sequence",
     "ImageStats": "Image Stats",
+    "ColorMatchToReference": "Color Match to Reference",
+    "AutoExposureMatch": "Auto Exposure Match",
 }
 
 WEB_DIRECTORY = "./js"
