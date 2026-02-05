@@ -502,8 +502,8 @@ class ColorGradingController:
                 "saturation": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05}),
             },
             "optional": {
-                "working_space": (["Linear", "sRGB"], {"default": "Linear",
-                    "tooltip": "Color space for grading operations"}),
+                "input_is_linear": ("BOOLEAN", {"default": True,
+                    "tooltip": "Enable if input is from PrepareImageHighBitDepth (already linear). Disable for raw ComfyUI images."}),
             }
         }
     
@@ -511,19 +511,18 @@ class ColorGradingController:
     RETURN_NAMES = ("image",)
     FUNCTION = "execute"
     CATEGORY = "image/color"
-    DESCRIPTION = "Professional color grading: exposure, contrast, lift/gamma/gain."
+    DESCRIPTION = "Professional color grading: exposure, contrast, lift/gamma/gain. Works in linear space."
     
     def execute(self, image, exposure: float, contrast: float, 
                 lift: float, gamma: float, gain: float, saturation: float,
-                working_space: str = "Linear"):
+                input_is_linear: bool = True):
         out = image.clone()
         
-        # Convert to linear for proper grading if needed
-        if working_space == "Linear":
-            # Assume input is sRGB from ComfyUI
+        # Only convert to linear if input is NOT already linear
+        if not input_is_linear:
             out = _srgb_to_linear(out)
         
-        # Apply grading operations
+        # Apply grading operations (all in linear space)
         out = _apply_exposure(out, exposure)
         out = _apply_contrast(out, contrast)
         out = _apply_lift_gamma_gain(out, lift, gamma, gain)
