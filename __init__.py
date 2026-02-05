@@ -516,6 +516,11 @@ class ColorGradingController:
     def execute(self, image, exposure: float, contrast: float, 
                 lift: float, gamma: float, gain: float, saturation: float,
                 input_is_linear: bool = True):
+        # Early return if all parameters are neutral - preserves full precision
+        if (input_is_linear and exposure == 0.0 and contrast == 1.0 and 
+            lift == 0.0 and gamma == 1.0 and gain == 1.0 and saturation == 1.0):
+            return (image,)
+        
         out = image.clone()
         
         # Only convert to linear if input is NOT already linear
@@ -568,6 +573,11 @@ class HDRCurveEditor:
     
     def execute(self, image, shadows: float, midtones: float, 
                 highlights: float, whites: float, blacks: float):
+        # Early return if all parameters are neutral (identity curve)
+        # This preserves full precision by avoiding the 4096-entry LUT
+        if shadows == 0.0 and midtones == 0.0 and highlights == 0.0 and whites == 0.0 and blacks == 0.0:
+            return (image,)
+        
         out = image.clone()
         
         # Build curve from controls (similar to Lightroom's parametric curve)
