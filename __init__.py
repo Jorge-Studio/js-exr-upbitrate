@@ -1057,6 +1057,230 @@ class AutoExposureMatch:
 
 
 # =============================================================================
+# NODE: Advanced Color Match (5 Algorithms)
+# =============================================================================
+class AdvancedColorMatch:
+    """Advanced automatic color matching with 5 professional algorithms."""
+    
+    METHODS = [
+        "Histogram Matching",
+        "LAB Color Space",
+        "Reinhard Transfer",
+        "CLAHE + Histogram",
+        "CDF Matching"
+    ]
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "processed_image": ("IMAGE",),
+                "reference_image": ("IMAGE",),
+                "method": (cls.METHODS, {"default": "Histogram Matching",
+                    "tooltip": "Algorithm for color matching"}),
+                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.05,
+                    "tooltip": "Blend strength (0=no change, 1=full match)"}),
+            },
+            "optional": {
+                "match_luminance_only": ("BOOLEAN", {"default": False,
+                    "tooltip": "Only match brightness, preserve original colors"}),
+            }
+        }
+    
+    RETURN_TYPES = ("IMAGE", "STRING",)
+    RETURN_NAMES = ("image", "method_info",)
+    FUNCTION = "execute"
+    CATEGORY = "image/color"
+    DESCRIPTION = "Advanced color matching: Histogram, LAB, Reinhard, CLAHE, or CDF algorithms."
+    
+    def _histogram_match_channel(self, source: np.ndarray, reference: np.ndarray) -> np.ndarray:
+        """Match histogram of source to reference for a single channel."""
+        # Get histograms
+        src_values, src_counts = np.unique(source.flatten(), return_counts=True)
+        ref_values, ref_counts = np.unique(reference.flatten(), return_counts=True)
+        
+        # Calculate CDFs
+        src_cdf = np.cumsum(src_counts).astype(np.float64)
+        src_cdf /= src_cdf[-1]
+        
+        ref_cdf = np.cumsum(ref_counts).astype(np.float64)
+        ref_cdf /= ref_cdf[-1]
+        
+        # Create mapping
+        interp_values = np.interp(src_cdf, ref_cdf, ref_values)
+        
+        # Map source values to matched values
+        result = np.interp(source.flatten(), src_values, interp_values)
+        return result.reshape(source.shape)
+    
+    def _histogram_matching(self, proc: np.ndarray, ref: np.ndarray) -> np.ndarray:
+        """Per-channel histogram matching."""
+        result = np.zeros_like(proc)
+        for c in range(3):
+            result[..., c] = self._histogram_match_channel(proc[..., c], ref[..., c])
+        return result
+    
+    def _rgb_to_lab(self, rgb: np.ndarray) -> np.ndarray:
+        """Convert RGB to LAB color space."""
+        if _HAS_CV2:
+            # OpenCV expects BGR and 0-255 range for proper conversion
+            bgr = cv2.cvtColor((rgb * 255).astype(np.float32), cv2.COLOR_RGB2BGR)
+            lab = cv2.cvtColor(bgr.astype(np.uint8), cv2.COLOR_BGR2LAB)
+            return lab.astype(np.float32)
+        else:
+            # Fallback: simple approximation
+            l = 0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]
+            a = rgb[..., 0] - rgb[..., 1]
+            b = rgb[..., 2] - rgb[..., 1]
+            return np.stack([l * 100, a * 128 + 128, b * 128 + 128], axis=-1)
+    
+    def _lab_to_rgb(self, lab: np.ndarray) -> np.ndarray:
+        """Convert LAB to RGB color space."""
+        if _HAS_CV2:
+            bgr = cv2.cvtColor(lab.astype(np.uint8), cv2.COLOR_LAB2BGR)
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            return rgb.astype(np.float32) / 255.0
+        else:
+            # Fallback
+            l = lab[..., 0] / 100
+            return np.stack([l, l, l], axis=-1)
+    
+    def _lab_matching(self, proc: np.ndarray, ref: np.ndarray) -> np.ndarray:
+        """Match in LAB color space for better perceptual results."""
+        proc_lab = self._rgb_to_lab(proc)
+        ref_lab = self._rgb_to_lab(ref)
+        
+        # Match each LAB channel
+        result_lab = np.zeros_like(proc_lab)
+        for c in range(3):
+            result_lab[..., c] = self._histogram_match_channel(proc_lab[..., c], ref_lab[..., c])
+        
+        return self._lab_to_rgb(result_lab)
+    
+    def _reinhard_transfer(self, proc: np.ndarray, ref: np.ndarray) -> np.ndarray:
+        """Reinhard color transfer algorithm (mean/std in LAB space)."""
+        proc_lab = self._rgb_to_lab(proc)
+        ref_lab = self._rgb_to_lab(ref)
+        
+        result_lab = np.zeros_like(proc_lab)
+        
+        for c in range(3):
+            proc_mean = proc_lab[..., c].mean()
+            proc_std = proc_lab[..., c].std() + 1e-6
+            ref_mean = ref_lab[..., c].mean()
+            ref_std = ref_lab[..., c].std() + 1e-6
+            
+            # Normalize then apply reference statistics
+            normalized = (proc_lab[..., c] - proc_mean) / proc_std
+            result_lab[..., c] = normalized * ref_std + ref_mean
+        
+        return self._lab_to_rgb(np.clip(result_lab, 0, 255))
+    
+    def _clahe_histogram(self, proc: np.ndarray, ref: np.ndarray) -> np.ndarray:
+        """CLAHE for local contrast + histogram matching for global."""
+        if not _HAS_CV2:
+            return self._histogram_matching(proc, ref)
+        
+        # Convert to LAB
+        proc_uint8 = (np.clip(proc, 0, 1) * 255).astype(np.uint8)
+        proc_bgr = cv2.cvtColor(proc_uint8, cv2.COLOR_RGB2BGR)
+        proc_lab = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2LAB)
+        
+        # Apply CLAHE to L channel
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        proc_lab[..., 0] = clahe.apply(proc_lab[..., 0])
+        
+        # Convert back
+        proc_bgr = cv2.cvtColor(proc_lab, cv2.COLOR_LAB2BGR)
+        proc_rgb = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+        
+        # Then apply histogram matching
+        return self._histogram_matching(proc_rgb, ref)
+    
+    def _cdf_matching(self, proc: np.ndarray, ref: np.ndarray) -> np.ndarray:
+        """Precise CDF (Cumulative Distribution Function) matching."""
+        result = np.zeros_like(proc)
+        
+        for c in range(3):
+            # Flatten channels
+            src = proc[..., c].flatten()
+            tgt = ref[..., c].flatten()
+            
+            # Sort and get indices
+            src_sorted_idx = np.argsort(src)
+            tgt_sorted = np.sort(tgt)
+            
+            # Create rank-based mapping
+            ranks = np.empty_like(src_sorted_idx)
+            ranks[src_sorted_idx] = np.linspace(0, len(tgt_sorted) - 1, len(src)).astype(int)
+            
+            # Map to target values
+            matched = tgt_sorted[ranks]
+            result[..., c] = matched.reshape(proc[..., c].shape)
+        
+        return result
+    
+    def execute(self, processed_image, reference_image, method: str, strength: float,
+                match_luminance_only: bool = False):
+        
+        if strength == 0:
+            return (processed_image, f"Method: {method} (strength=0, no change)")
+        
+        proc = processed_image.clone()
+        ref = reference_image[0].float().cpu().numpy()
+        
+        # Clamp reference to 0-1 for algorithm stability
+        ref = np.clip(ref, 0, 1)
+        
+        results = []
+        
+        for i in range(proc.shape[0]):
+            frame = proc[i].float().cpu().numpy()
+            frame_clipped = np.clip(frame, 0, 1)
+            
+            # Apply selected method
+            if method == "Histogram Matching":
+                matched = self._histogram_matching(frame_clipped, ref)
+            elif method == "LAB Color Space":
+                matched = self._lab_matching(frame_clipped, ref)
+            elif method == "Reinhard Transfer":
+                matched = self._reinhard_transfer(frame_clipped, ref)
+            elif method == "CLAHE + Histogram":
+                matched = self._clahe_histogram(frame_clipped, ref)
+            elif method == "CDF Matching":
+                matched = self._cdf_matching(frame_clipped, ref)
+            else:
+                matched = frame_clipped
+            
+            # If luminance only, preserve original colors
+            if match_luminance_only:
+                orig_lum = 0.2126 * frame_clipped[..., 0] + 0.7152 * frame_clipped[..., 1] + 0.0722 * frame_clipped[..., 2]
+                new_lum = 0.2126 * matched[..., 0] + 0.7152 * matched[..., 1] + 0.0722 * matched[..., 2]
+                
+                # Scale original colors by luminance ratio
+                lum_ratio = (new_lum + 1e-6) / (orig_lum + 1e-6)
+                matched = frame_clipped * lum_ratio[..., np.newaxis]
+            
+            # Blend with original
+            if strength < 1.0:
+                matched = frame_clipped * (1 - strength) + matched * strength
+            
+            # Restore HDR values above 1.0 from original
+            hdr_mask = frame > 1.0
+            matched = np.where(hdr_mask, frame, matched)
+            
+            results.append(torch.from_numpy(matched.astype(np.float32)))
+        
+        out = torch.stack(results)
+        
+        info = f"Method: {method}, Strength: {strength:.0%}"
+        if match_luminance_only:
+            info += " (luminance only)"
+        
+        return (out, info)
+
+
+# =============================================================================
 # NODE MAPPINGS
 # =============================================================================
 NODE_CLASS_MAPPINGS = {
@@ -1069,6 +1293,7 @@ NODE_CLASS_MAPPINGS = {
     "ImageStats": ImageStats,
     "ColorMatchToReference": ColorMatchToReference,
     "AutoExposureMatch": AutoExposureMatch,
+    "AdvancedColorMatch": AdvancedColorMatch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -1081,6 +1306,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImageStats": "Image Stats",
     "ColorMatchToReference": "Color Match to Reference",
     "AutoExposureMatch": "Auto Exposure Match",
+    "AdvancedColorMatch": "Advanced Color Match",
 }
 
 WEB_DIRECTORY = "./js"

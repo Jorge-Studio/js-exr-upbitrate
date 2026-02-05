@@ -12,6 +12,8 @@ Professional-grade EXR export with **Log format support**, **color grading contr
 2. Load the included workflow: `workflows/ultimate_exr_workflow.json`
 3. Select your image and run!
 
+**Also included:** `workflows/advanced_color_match_workflow.json` - Compare all 5 color matching algorithms side by side!
+
 This workflow uses all 9 nodes in the optimal configuration for professional output.
 
 ---
@@ -23,6 +25,7 @@ This workflow uses all 9 nodes in the optimal configuration for professional out
 - **Color Grading Controller**: Professional lift/gamma/gain, exposure, contrast, saturation with **live preview**
 - **HDR Curve Editor**: Lightroom-style shadows/midtones/highlights controls with **interactive curve display**
 - **Color Match to Reference**: Automatically match processed image to original (prevents dark/shifted outputs)
+- **Advanced Color Match**: 5 professional color calibration algorithms (Histogram, LAB, Reinhard, CLAHE, CDF)
 - **Auto Exposure Match**: Quick brightness matching with exposure stop readout
 - **Image Stats**: Verify range, unique values, and effective bit depth
 - **Improved Precision**: Up to 42,000+ unique values vs ~4,000 in v1
@@ -40,7 +43,7 @@ pip install openexr imath imageio opencv-python
 
 ---
 
-## Nodes Included (9 Total)
+## Nodes Included (10 Total)
 
 | Node | Description |
 |------|-------------|
@@ -48,6 +51,7 @@ pip install openexr imath imageio opencv-python
 | **Color Grading Controller** | Exposure, contrast, lift/gamma/gain, saturation (with live preview) |
 | **HDR Curve Editor** | Shadows, midtones, highlights, whites, blacks (with curve display) |
 | **Color Match to Reference** | Auto-match processed image colors/brightness to original |
+| **Advanced Color Match** | 5 professional algorithms: Histogram, LAB, Reinhard, CLAHE, CDF |
 | **Auto Exposure Match** | Quick exposure-only matching with stop readout |
 | **Color Space Converter** | Convert between sRGB, Linear, and Log formats |
 | **Save Image EXR** | Export single image as 16/32-bit EXR with Log format |
@@ -203,6 +207,24 @@ Save Image EXR (ARRI LogC3)
 | `midtones` | -1 to 1 | Midtone adjustment |
 | `highlights` | -1 to 1 | Highlight tones |
 | `whites` | -1 to 1 | White point adjustment |
+
+### Advanced Color Match
+
+| Setting | Options | Description |
+|---------|---------|-------------|
+| `method` | Histogram Matching, LAB Color Space, Reinhard Transfer, CLAHE + Histogram, CDF Matching | Color calibration algorithm |
+| `strength` | 0.0 to 1.0 | Blend strength (0=no change, 1=full match) |
+| `match_luminance_only` | true/false | Only match brightness, preserve original colors |
+
+**Algorithm Guide:**
+
+| Algorithm | Best For |
+|-----------|----------|
+| **Histogram Matching** | General-purpose, fast, good for most images |
+| **LAB Color Space** | Better perceptual color accuracy |
+| **Reinhard Transfer** | Classic color transfer, preserves structure |
+| **CLAHE + Histogram** | Local contrast + global color matching |
+| **CDF Matching** | Precise statistical matching |
 
 ---
 

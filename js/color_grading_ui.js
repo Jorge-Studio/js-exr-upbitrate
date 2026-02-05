@@ -465,4 +465,96 @@ app.registerExtension({
 });
 
 
+// ============================================================================
+// Advanced Color Match - Algorithm indicator
+// ============================================================================
+
+app.registerExtension({
+    name: "js-exr-upbitrate.AdvancedColorMatch",
+    
+    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        if (nodeData.name !== "AdvancedColorMatch") return;
+        
+        const onNodeCreated = nodeType.prototype.onNodeCreated;
+        nodeType.prototype.onNodeCreated = function() {
+            onNodeCreated?.apply(this, arguments);
+            
+            const methodWidget = this.addCustomWidget({
+                name: "method_display",
+                type: "method_info",
+                value: null,
+                draw: function(ctx, node, widgetWidth, y, widgetHeight) {
+                    const margin = 10;
+                    
+                    const getVal = (name, def) => {
+                        const w = node.widgets?.find(w => w.name === name);
+                        return w ? w.value : def;
+                    };
+                    
+                    const method = getVal("method", "Histogram Matching");
+                    const strength = getVal("strength", 1.0);
+                    const lumOnly = getVal("match_luminance_only", false);
+                    
+                    // Background
+                    ctx.fillStyle = "#1a2a1a";
+                    ctx.fillRect(margin, y, widgetWidth - margin * 2, 50);
+                    
+                    // Method name with icon
+                    const methodColors = {
+                        "Histogram Matching": "#00ff88",
+                        "LAB Color Space": "#ff8800",
+                        "Reinhard Transfer": "#ff00ff",
+                        "CLAHE + Histogram": "#00ffff",
+                        "CDF Matching": "#ffff00"
+                    };
+                    
+                    const methodIcons = {
+                        "Histogram Matching": "📊",
+                        "LAB Color Space": "🎨",
+                        "Reinhard Transfer": "🔄",
+                        "CLAHE + Histogram": "⚡",
+                        "CDF Matching": "📈"
+                    };
+                    
+                    ctx.font = "14px sans-serif";
+                    ctx.fillText(methodIcons[method] || "🎯", margin + 5, y + 20);
+                    
+                    ctx.fillStyle = methodColors[method] || "#fff";
+                    ctx.font = "bold 12px sans-serif";
+                    ctx.fillText(method, margin + 25, y + 20);
+                    
+                    // Strength bar
+                    const barWidth = widgetWidth - margin * 2 - 20;
+                    const barHeight = 8;
+                    const barY = y + 32;
+                    
+                    // Background bar
+                    ctx.fillStyle = "#333";
+                    ctx.fillRect(margin + 10, barY, barWidth, barHeight);
+                    
+                    // Filled bar
+                    ctx.fillStyle = methodColors[method] || "#00ff88";
+                    ctx.fillRect(margin + 10, barY, barWidth * strength, barHeight);
+                    
+                    // Strength text
+                    ctx.fillStyle = "#888";
+                    ctx.font = "10px sans-serif";
+                    ctx.fillText(`${Math.round(strength * 100)}%`, margin + barWidth - 25, barY + 18);
+                    
+                    // Luminance only indicator
+                    if (lumOnly) {
+                        ctx.fillStyle = "#ffaa00";
+                        ctx.font = "9px sans-serif";
+                        ctx.fillText("LUM ONLY", margin + 10, barY + 18);
+                    }
+                },
+                computeSize: function() {
+                    return [200, 55];
+                }
+            });
+        };
+    }
+});
+
+
 console.log("[js-exr-upbitrate] Color grading UI with live preview loaded");
