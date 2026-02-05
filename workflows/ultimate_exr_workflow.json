@@ -30,8 +30,8 @@
       "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
       "outputs": [{"name": "image", "type": "IMAGE", "links": [2], "slot_index": 0}],
       "properties": {"Node name for S&R": "PrepareImageHighBitDepth"},
-      "widgets_values": [true, 0.5, 0.3],
-      "title": "2. Prepare (Linear + Headroom)"
+      "widgets_values": [true, 0.0, 1.0],
+      "title": "2. Prepare (deband=1.0 for cinema-grade)"
     },
     {
       "id": 3,

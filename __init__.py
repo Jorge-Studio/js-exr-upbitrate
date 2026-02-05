@@ -610,8 +610,8 @@ class PrepareImageHighBitDepth:
                     "tooltip": "Input is sRGB (standard ComfyUI). Disable if already linear."}),
                 "add_headroom": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 2.0, "step": 0.1,
                     "tooltip": "Add highlight headroom (stops above 1.0). Recommended: 0.5-1.0 for grading flexibility."}),
-                "deband_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 2.0, "step": 0.05,
-                    "tooltip": "Debanding strength (0=off). Use 0.3-0.5 for subtle, 1.0+ for aggressive."}),
+                "deband_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05,
+                    "tooltip": "CRITICAL for quality! Adds noise to break 8-bit quantization. 1.0=cinema-grade, 0=8-bit output."}),
             }
         }
     
@@ -619,7 +619,7 @@ class PrepareImageHighBitDepth:
     RETURN_NAMES = ("image",)
     FUNCTION = "execute"
     CATEGORY = "image/processing"
-    DESCRIPTION = "Prepare image for EXR export with proper linear conversion and headroom."
+    DESCRIPTION = "REQUIRED for cinema-grade EXR! Converts sRGB→Linear and adds debanding noise to break 8-bit quantization."
     
     def execute(self, image, input_is_srgb: bool, add_headroom: float, deband_strength: float):
         out = image.clone()

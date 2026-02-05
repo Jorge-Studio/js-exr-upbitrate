@@ -23,20 +23,20 @@
       "id": 2,
       "type": "PrepareImageHighBitDepth",
       "pos": [420, 300],
-      "size": [315, 150],
+      "size": [340, 160],
       "flags": {},
       "order": 1,
       "mode": 0,
       "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
       "outputs": [{"name": "image", "type": "IMAGE", "links": [2], "slot_index": 0}],
       "properties": {"Node name for S&R": "PrepareImageHighBitDepth"},
-      "widgets_values": [true, 0.0, 0.0],
-      "title": "2. Prepare (sRGB->Linear, NO headroom, NO deband)"
+      "widgets_values": [true, 0.0, 1.0],
+      "title": "2. Prepare (deband=1.0 for cinema-grade)"
     },
     {
       "id": 3,
       "type": "SaveImageEXR",
-      "pos": [790, 300],
+      "pos": [820, 300],
       "size": [315, 200],
       "flags": {},
       "order": 2,
@@ -44,13 +44,13 @@
       "inputs": [{"name": "image", "type": "IMAGE", "link": 2}],
       "outputs": [{"name": "image", "type": "IMAGE", "links": [3], "slot_index": 0}],
       "properties": {"Node name for S&R": "SaveImageEXR"},
-      "widgets_values": ["test_good", "32", "zip", "Linear", true],
+      "widgets_values": ["good_exr", "32", "zip", "Linear", true],
       "title": "3. Save 32-bit LINEAR EXR"
     },
     {
       "id": 4,
       "type": "ColorSpaceConverter",
-      "pos": [1160, 300],
+      "pos": [1190, 300],
       "size": [280, 120],
       "flags": {},
       "order": 3,
@@ -64,7 +64,7 @@
     {
       "id": 5,
       "type": "PreviewImage",
-      "pos": [1160, 480],
+      "pos": [1190, 480],
       "size": [350, 300],
       "flags": {},
       "order": 4,
@@ -101,8 +101,8 @@
   ],
   "groups": [
     {
-      "title": "TEST: Simple Linear EXR (No Color Matching)",
-      "bounding": [40, 250, 1500, 350],
+      "title": "CINEMA-GRADE LINEAR EXR",
+      "bounding": [40, 250, 1420, 350],
       "color": "#2E8B57"
     }
   ],

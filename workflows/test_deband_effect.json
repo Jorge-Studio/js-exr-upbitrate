@@ -23,7 +23,7 @@
       "id": 2,
       "type": "PrepareImageHighBitDepth",
       "pos": [420, 300],
-      "size": [320, 160],
+      "size": [340, 160],
       "flags": {},
       "order": 1,
       "mode": 0,
@@ -31,12 +31,12 @@
       "outputs": [{"name": "image", "type": "IMAGE", "links": [3], "slot_index": 0}],
       "properties": {"Node name for S&R": "PrepareImageHighBitDepth"},
       "widgets_values": [true, 0.0, 0.0],
-      "title": "2A. NO DEBAND (deband=0)"
+      "title": "BAD: deband=0 (8-bit output)"
     },
     {
       "id": 3,
       "type": "SaveImageEXR",
-      "pos": [800, 300],
+      "pos": [820, 300],
       "size": [300, 180],
       "flags": {},
       "order": 3,
@@ -44,14 +44,14 @@
       "inputs": [{"name": "image", "type": "IMAGE", "link": 3}],
       "outputs": [{"name": "image", "type": "IMAGE", "links": null}],
       "properties": {"Node name for S&R": "SaveImageEXR"},
-      "widgets_values": ["NO_deband", "32", "zip", "Linear", true],
-      "title": "3A. Save EXR (expect ~256 unique)"
+      "widgets_values": ["BAD_no_deband", "32", "zip", "Linear", true],
+      "title": "RESULT: ~256 unique (8-bit)"
     },
     {
       "id": 4,
       "type": "PrepareImageHighBitDepth",
       "pos": [420, 530],
-      "size": [320, 160],
+      "size": [340, 160],
       "flags": {},
       "order": 2,
       "mode": 0,
@@ -59,12 +59,12 @@
       "outputs": [{"name": "image", "type": "IMAGE", "links": [4], "slot_index": 0}],
       "properties": {"Node name for S&R": "PrepareImageHighBitDepth"},
       "widgets_values": [true, 0.0, 1.0],
-      "title": "2B. WITH DEBAND (deband=1.0)"
+      "title": "GOOD: deband=1.0 (cinema-grade)"
     },
     {
       "id": 5,
       "type": "SaveImageEXR",
-      "pos": [800, 530],
+      "pos": [820, 530],
       "size": [300, 180],
       "flags": {},
       "order": 4,
@@ -72,13 +72,13 @@
       "inputs": [{"name": "image", "type": "IMAGE", "link": 4}],
       "outputs": [{"name": "image", "type": "IMAGE", "links": null}],
       "properties": {"Node name for S&R": "SaveImageEXR"},
-      "widgets_values": ["WITH_deband", "32", "zip", "Linear", true],
-      "title": "3B. Save EXR (expect millions unique)"
+      "widgets_values": ["GOOD_with_deband", "32", "zip", "Linear", true],
+      "title": "RESULT: 7M+ unique (cinema)"
     },
     {
       "id": 6,
       "type": "ImageStats",
-      "pos": [1160, 300],
+      "pos": [1180, 300],
       "size": [280, 100],
       "flags": {},
       "order": 5,
@@ -89,12 +89,12 @@
         {"name": "stats", "type": "STRING", "links": null}
       ],
       "properties": {"Node name for S&R": "ImageStats"},
-      "title": "Stats: NO deband"
+      "title": "Stats: BAD (expect 8-bit)"
     },
     {
       "id": 7,
       "type": "ImageStats",
-      "pos": [1160, 530],
+      "pos": [1180, 530],
       "size": [280, 100],
       "flags": {},
       "order": 6,
@@ -105,7 +105,7 @@
         {"name": "stats", "type": "STRING", "links": null}
       ],
       "properties": {"Node name for S&R": "ImageStats"},
-      "title": "Stats: WITH deband"
+      "title": "Stats: GOOD (expect cinema)"
     },
     {
       "id": 8,
@@ -117,7 +117,7 @@
       "mode": 0,
       "inputs": [{"name": "images", "type": "IMAGE", "link": 10}],
       "outputs": [],
-      "title": "Original (8-bit)",
+      "title": "Original (8-bit input)",
       "properties": {"Node name for S&R": "PreviewImage"},
       "color": "#223",
       "bgcolor": "#335"
@@ -132,32 +132,12 @@
   ],
   "groups": [
     {
-      "title": "DEBAND COMPARISON TEST",
-      "bounding": [40, 250, 1420, 500],
+      "title": "DEBAND COMPARISON: See why deband_strength matters!",
+      "bounding": [40, 250, 1440, 500],
       "color": "#2E8B57"
-    },
-    {
-      "title": "Expected Results:",
-      "bounding": [40, 760, 500, 80],
-      "color": "#4A90D9"
     }
   ],
   "config": {},
-  "extra": {
-    "ds": {"scale": 0.7, "offset": [50, 50]},
-    "notes": [
-      "TEST: Compare output with and without debanding",
-      "",
-      "WITHOUT DEBAND (top row):",
-      "  - Expect ~256-1000 unique values (8-bit equivalent)",
-      "  - Rating: Poor or 8-bit equivalent",
-      "",
-      "WITH DEBAND (bottom row):",
-      "  - Expect 1M+ unique values (cinema-grade)",
-      "  - Rating: Cinema-grade (5 stars)",
-      "",
-      "Use EXR Viewer tool to analyze the output files."
-    ]
-  },
+  "extra": {"ds": {"scale": 0.7, "offset": [50, 50]}},
   "version": 0.4
 }
