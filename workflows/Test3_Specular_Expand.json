@@ -1,0 +1,58 @@
+{
+  "last_node_id": 3,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRImage",
+      "pos": [0, 0],
+      "size": [300, 80],
+      "inputs": [],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [1]},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "widgets_values": ["/workspace/runpod-slim/ComfyUI/input/molinaire_test/Topaz_proteus_Nyx_Hyperion_LStackDeb_PrecisionDeband_1080p.exr"],
+      "title": "1. Load EXR Image"
+    },
+    {
+      "id": 2,
+      "type": "SpecularExpand",
+      "pos": [350, 0],
+      "size": [280, 200],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [2]}],
+      "widgets_values": [12.0, 2.5, 0.85, 3.0, 32, 4.0],
+      "title": "2. Specular Expand",
+      "properties": {
+        "target_peak": 12.0,
+        "power": 2.5,
+        "knee_percentile": 0.85,
+        "contrast_ratio": 3.0,
+        "window_size": 32,
+        "mask_blur": 4.0
+      }
+    },
+    {
+      "id": 3,
+      "type": "SaveImageEXR",
+      "pos": [680, 0],
+      "size": [280, 150],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 2}],
+      "outputs": [],
+      "widgets_values": ["Test3_Specular_Expand", "Linear", "16", "piz"],
+      "title": "3. Save EXR (16-bit PIZ)"
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "description": "Expand specular highlights for HDR. Detects bright areas and expands them into HDR range."
+  },
+  "version": 0.4
+}

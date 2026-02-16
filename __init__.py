@@ -1290,9 +1290,22 @@ class AdvancedColorMatch:
 
 
 # =============================================================================
+# IMPORT ADDITIONAL NODE MODULES
+# =============================================================================
+from .cinema_delivery import (
+    CINEMA_DELIVERY_NODES,
+    CINEMA_DELIVERY_DISPLAY_NAMES,
+)
+from .animated_motion import (
+    ANIMATED_MOTION_NODES,
+    ANIMATED_MOTION_DISPLAY_NAMES,
+)
+
+# =============================================================================
 # NODE MAPPINGS
 # =============================================================================
 NODE_CLASS_MAPPINGS = {
+    # Core Color/EXR Nodes
     "ColorSpaceConverter": ColorSpaceConverter,
     "ColorGradingController": ColorGradingController,
     "HDRCurveEditor": HDRCurveEditor,
@@ -1304,6 +1317,12 @@ NODE_CLASS_MAPPINGS = {
     "AutoExposureMatch": AutoExposureMatch,
     "AdvancedColorMatch": AdvancedColorMatch,
 }
+
+# Add Cinema Delivery nodes
+NODE_CLASS_MAPPINGS.update(CINEMA_DELIVERY_NODES)
+
+# Add Animated Motion nodes
+NODE_CLASS_MAPPINGS.update(ANIMATED_MOTION_NODES)
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ColorSpaceConverter": "Color Space Converter",
@@ -1317,6 +1336,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "AutoExposureMatch": "Auto Exposure Match",
     "AdvancedColorMatch": "Advanced Color Match",
 }
+
+# Add Cinema Delivery display names
+NODE_DISPLAY_NAME_MAPPINGS.update(CINEMA_DELIVERY_DISPLAY_NAMES)
+
+# Add Animated Motion display names
+NODE_DISPLAY_NAME_MAPPINGS.update(ANIMATED_MOTION_DISPLAY_NAMES)
 
 WEB_DIRECTORY = "./js"
 

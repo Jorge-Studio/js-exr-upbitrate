@@ -1,34 +1,47 @@
-# High Bit Depth EXR Export for ComfyUI (v2.0)
+# High Bit Depth EXR Export & Cinema Delivery for ComfyUI (v3.0)
 
-Professional-grade EXR export with **Log format support**, **color grading controls**, **auto color matching**, and **maximum tonal precision** for VFX, compositing, and color grading workflows.
+Professional-grade EXR export with **Log format support**, **color grading controls**, **cinema delivery compliance**, **motion animation**, and **maximum tonal precision** for VFX, film, compositing, and color grading workflows.
+
+**Now includes full Molinare/Professional DI delivery support!**
 
 ---
 
-## Quick Start - Ultimate Workflow
-
-**The fastest way to get the best results:**
+## Quick Start
 
 1. Install the node (see Installation below)
-2. Load the included workflow: `workflows/ultimate_exr_workflow.json`
-3. Select your image and run!
+2. Load any included workflow from `workflows/`
+3. Connect your image and run!
 
-**Also included:** `workflows/advanced_color_match_workflow.json` - Compare all 5 color matching algorithms side by side!
-
-This workflow uses all 9 nodes in the optimal configuration for professional output.
+**Recommended workflows:**
+- `ultimate_exr_workflow.json` - Complete HDR processing pipeline
+- `Test6_Cinema_HDR_Max.json` - Maximum quality cinema delivery
+- `Video_ProRes4444_LogC3.json` - Video export in ProRes 4444
 
 ---
 
-## What's New in v2.0
+## What's New in v3.0
 
+### Cinema Delivery Nodes (Molinare Compliant)
+- **Save EXR Sequence**: Export video frames as numbered EXR sequence with ACES 2065-1 color space
+- **Generate Delivery CSV**: Create professional manifest files for post-house delivery
+- **ACES → Rec.709 Preview**: View-transform for monitoring HDR content
+
+### Animation & Motion Control
+- **Animated Pan & Scan**: Keyframe-based pan, zoom, and rotation animation
+- **Load EXR Image**: Load single HDR EXR files (ComfyUI default loader doesn't support EXR)
+- **Load EXR Sequence**: Load EXR image sequences as video batches
+- **Extract Motion from Video**: Optical flow-based motion path extraction
+- **Apply Motion Path**: Apply extracted or manual motion to sequences
+
+### Previous Features (v2.0)
 - **Log Format Export**: ARRI LogC3, Sony S-Log3, Panasonic V-Log, Canon Log 3, RED Log3G10, DaVinci Intermediate
 - **Color Space Converter**: Convert between sRGB, Linear, and Log formats
 - **Color Grading Controller**: Professional lift/gamma/gain, exposure, contrast, saturation with **live preview**
-- **HDR Curve Editor**: Lightroom-style shadows/midtones/highlights controls with **interactive curve display**
-- **Color Match to Reference**: Automatically match processed image to original (prevents dark/shifted outputs)
-- **Advanced Color Match**: 5 professional color calibration algorithms (Histogram, LAB, Reinhard, CLAHE, CDF)
+- **HDR Curve Editor**: Lightroom-style shadows/midtones/highlights controls
+- **Color Match to Reference**: Automatically match processed image to original
+- **Advanced Color Match**: 5 professional color calibration algorithms
 - **Auto Exposure Match**: Quick brightness matching with exposure stop readout
 - **Image Stats**: Verify range, unique values, and effective bit depth
-- **Improved Precision**: Up to 42,000+ unique values vs ~4,000 in v1
 
 ---
 
@@ -37,120 +50,162 @@ This workflow uses all 9 nodes in the optimal configuration for professional out
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/Jorge-Studio/js-exr-upbitrate.git
-pip install openexr imath imageio opencv-python
+cd js-exr-upbitrate
+pip install -r requirements.txt
 # Restart ComfyUI
 ```
 
+### Dependencies
+
+| Package | Required | Purpose |
+|---------|----------|---------|
+| openexr | **Yes** | True 32-bit EXR writing |
+| imath | **Yes** | OpenEXR dependency |
+| pyexr | **Yes** | EXR reading/writing (primary) |
+| imageio | Recommended | EXR fallback + video handling |
+| opencv-python | Recommended | Debanding, rotation, optical flow |
+| scipy | Optional | Motion smoothing |
+| pillow | Recommended | Image resizing |
+
 ---
 
-## Nodes Included (10 Total)
+## All Nodes (18 Total)
+
+### Core Color & EXR Nodes (10)
 
 | Node | Description |
 |------|-------------|
 | **Prepare Image High Bit Depth** | sRGB→Linear + headroom + debanding |
-| **Color Grading Controller** | Exposure, contrast, lift/gamma/gain, saturation (with live preview) |
-| **HDR Curve Editor** | Shadows, midtones, highlights, whites, blacks (with curve display) |
-| **Color Match to Reference** | Auto-match processed image colors/brightness to original |
-| **Advanced Color Match** | 5 professional algorithms: Histogram, LAB, Reinhard, CLAHE, CDF |
-| **Auto Exposure Match** | Quick exposure-only matching with stop readout |
+| **Color Grading Controller** | Exposure, contrast, lift/gamma/gain, saturation |
+| **HDR Curve Editor** | Shadows, midtones, highlights, whites, blacks |
+| **Color Match to Reference** | Auto-match processed image colors to original |
+| **Advanced Color Match** | 5 algorithms: Histogram, LAB, Reinhard, CLAHE, CDF |
+| **Auto Exposure Match** | Quick exposure-only matching |
 | **Color Space Converter** | Convert between sRGB, Linear, and Log formats |
 | **Save Image EXR** | Export single image as 16/32-bit EXR with Log format |
 | **Save Video EXR Sequence** | Export video as EXR sequence with Log format |
 | **Image Stats** | Display range, unique values, bit depth estimate |
 
----
+### Cinema Delivery Nodes (3)
 
-## Ultimate Workflow (Recommended)
+| Node | Description |
+|------|-------------|
+| **Save EXR Sequence (Cinema)** | DCI 4K ACES 2065-1 EXR sequence for post-house delivery |
+| **Generate Delivery CSV** | Professional manifest with shot info, frame ranges, specs |
+| **ACES → Rec.709 Preview** | RRT+ODT view transform for preview monitoring |
 
-Load `workflows/ultimate_exr_workflow.json` for the complete pipeline:
+### Animation & Motion Nodes (5)
 
-```
-1. LOAD IMAGE ─────────────────────────────────────────────────────────┐
-       │                                                               │
-       ↓                                                               │
-2. PREPARE (sRGB→Linear + 0.5 stop headroom + subtle deband)           │
-       │                                                               │
-       ↓                                                               │
-3. COLOR GRADING (exposure, contrast, lift/gamma/gain, saturation)     │
-       │      [Live preview updates as you adjust!]                    │
-       ↓                                                               │
-4. HDR CURVES (fine-tune shadows, midtones, highlights)                │
-       │      [Interactive curve visualization!]                       │
-       ↓                                                               │
-5. COLOR MATCH TO REFERENCE ←──────────────────────────────────────────┘
-       │      (auto-matches brightness/contrast/colors to original)
-       │      [Prevents dark or color-shifted outputs!]
-       ↓
-6. IMAGE STATS (verify quality metrics before export)
-       │
-       ↓
-7. SAVE EXR (32-bit, ARRI LogC3, ZIP compression)
-       │
-       ├──→ 8. COLOR SPACE CONVERTER (Linear→sRGB) → PREVIEW
-       │
-       └──→ 9. AUTO EXPOSURE MATCH (alternative comparison)
-```
-
-### Why This Workflow Works Best
-
-1. **Headroom**: 0.5 stops of highlight headroom gives colorists room to work
-2. **Auto Color Match**: Ensures your graded image stays true to the original's brightness/colors
-3. **Live Previews**: See changes before running the full workflow
-4. **Quality Verification**: Image Stats confirms you're getting maximum precision
-5. **Industry Standard Output**: 32-bit ARRI LogC3 works with any professional software
+| Node | Description |
+|------|-------------|
+| **Animated Pan & Scan** | Keyframe animation for pan, zoom, rotation with easing |
+| **Load EXR Image** | Load single HDR EXR files |
+| **Load EXR Sequence** | Load EXR sequence as video batch |
+| **Extract Motion from Video** | Optical flow motion path extraction |
+| **Apply Motion Path** | Apply motion to image/video sequences |
 
 ---
 
-## Other Recommended Workflows
+## Molinare/Professional DI Delivery
 
-### For Color Grading (Matching Camera Footage)
+This package is designed to meet professional post-production delivery specifications:
 
-```
-[Image Source] 
-    ↓
-Prepare Image High Bit Depth
-    └─ input_is_srgb: true
-    └─ add_headroom: 0.5 (gives room for grading)
-    └─ deband_strength: 0.3
-    ↓
-Save Image EXR
-    └─ bit_depth: 32
-    └─ output_format: ARRI LogC3 (or match your camera)
-    └─ compression: zip
-```
+### Supported Specifications
+- **Resolution**: DCI 4K (4096×2160), UHD 4K (3840×2160), 2K, 1080p
+- **Color Space**: ACES 2065-1 (AP0), ACEScct, Linear Rec.709
+- **Bit Depth**: 16-bit half-float or 32-bit full float
+- **Compression**: PIZ (recommended), ZIP, ZIPS, RLE, None
+- **Frame Rate**: 24fps (or any custom)
+- **Naming**: `shot_name_V###.####.exr`
 
-### For VFX Compositing (Linear Workflow)
+### Cinema Delivery Workflow
 
 ```
-[Image Source] 
+[Video/Image Source]
     ↓
-Color Space Converter
-    └─ input_space: sRGB (ComfyUI Default)
-    └─ output_space: Linear
+Prepare Image High Bit Depth (sRGB→Linear + headroom)
     ↓
-Save Image EXR
-    └─ bit_depth: 32
-    └─ output_format: Linear
+Color Grading Controller (creative adjustments)
+    ↓
+Color Space Converter (Linear → keep or convert)
+    ↓
+Save EXR Sequence (Cinema)
+    └─ shot_name: "KSA_001_010"
+    └─ convert_to_aces: true
+    └─ bit_depth: 16
+    └─ compression: piz
+    ↓
+Generate Delivery CSV (metadata manifest)
+    ↓
+ACES → Rec.709 Preview (for QC viewing)
 ```
 
-### With Color Grading
+### Example Manifest Output
+
+```csv
+Field,Value
+Shot Name,KSA_001_010_V001
+Resolution,4096x2160
+Color Space,ACES 2065-1
+Framerate,24 fps
+Frame Range,1001-1120
+Total Frames,120
+Duration,5.00 seconds
+Format,OpenEXR 16-bit half-float
+Compression,PIZ
+Delivery Date,2026-01-26 14:30
+Generated By,NodyJS/ComfyUI Cinema Delivery
+```
+
+---
+
+## Animation & Motion Control
+
+### Manual Keyframe Animation
+
+Use **Animated Pan & Scan** for cinematic camera movements:
 
 ```
-[Image Source]
+[Large Source Image or Video]
     ↓
-Prepare Image High Bit Depth
+Animated Pan & Scan
+    └─ output_size: 4K DCI
+    └─ start_x: -500, start_y: 0, start_zoom: 1.0
+    └─ end_x: 500, end_y: 0, end_zoom: 1.2
+    └─ easing: ease_in_out
+    └─ rotation_start: 0, rotation_end: 5
     ↓
-Color Grading Controller
-    └─ exposure: 0.5
-    └─ contrast: 1.1
-    └─ saturation: 1.2
-    ↓
-HDR Curve Editor (optional)
-    └─ shadows: 0.1
-    └─ highlights: -0.05
-    ↓
-Save Image EXR (ARRI LogC3)
+[Animated Output]
 ```
+
+### Motion Extraction from Reference Video
+
+```
+[Reference Video with Camera Movement]
+    ↓
+Extract Motion from Video
+    └─ sensitivity: 1.0
+    └─ smoothing: 5
+    ↓
+[motion_path output]
+
+[Target Image/Video]
+    ↓
+Apply Motion Path ← [motion_path]
+    └─ scale_motion: 1.0
+    └─ invert_motion: false (true = stabilization)
+    ↓
+[Output with Matching Motion]
+```
+
+### Easing Functions
+
+| Easing | Description |
+|--------|-------------|
+| `linear` | Constant speed |
+| `ease_in` | Start slow, accelerate |
+| `ease_out` | Start fast, decelerate |
+| `ease_in_out` | Smooth acceleration and deceleration |
 
 ---
 
@@ -168,124 +223,137 @@ Save Image EXR (ARRI LogC3)
 
 ---
 
-## Node Settings
+## Included Workflows
 
-### Prepare Image High Bit Depth
+### Core Workflows
+| Workflow | Description |
+|----------|-------------|
+| `ultimate_exr_workflow.json` | Complete HDR pipeline with all nodes |
+| `advanced_color_match_workflow.json` | Compare all 5 color matching algorithms |
+
+### Cinema Delivery Workflows
+| Workflow | Description |
+|----------|-------------|
+| `Test1_HDR_Full_Pipeline.json` | HDR processing with debanding and grading |
+| `Test2_ACES_Delivery.json` | Direct ACES 2065-1 EXR export |
+| `Test3_Specular_Expand.json` | HDR highlight expansion |
+| `Test4_ColorGrade_LogC3.json` | Professional color grading to ARRI LogC3 |
+| `Test5_Rec709_Preview.json` | Rec.709 preview generation |
+| `Test6_Cinema_HDR_Max.json` | Maximum quality cinema output |
+
+### Video Export Workflows
+| Workflow | Description |
+|----------|-------------|
+| `Video_ProRes4444_LogC3.json` | ProRes 4444 video export in LogC3 |
+| `Video_H265_Rec709_Preview.json` | H.265 preview video for QC |
+
+---
+
+## Node Settings Reference
+
+### Save EXR Sequence (Cinema)
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `input_is_srgb` | true | Input is sRGB (standard ComfyUI output) |
-| `add_headroom` | 0.0 | Add highlight headroom in stops (0.5-1.0 recommended) |
-| `deband_strength` | 0.0 | Remove banding (0.3-0.5 subtle, 1.0+ aggressive) |
+| shot_name | KSA_001_010 | Shot identifier without version |
+| version | 1 | Version number (becomes V001, V002, etc.) |
+| start_frame | 1001 | Industry-standard start frame |
+| input_is_linear | true | Input is scene-linear |
+| convert_to_aces | true | Convert to ACES 2065-1 |
+| bit_depth | 16 | Half-float for Molinare spec |
+| compression | piz | PIZ recommended for delivery |
 
-### Save Image EXR
+### Animated Pan & Scan
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `bit_depth` | 32 | 16-bit (HALF) or 32-bit (FLOAT) |
-| `compression` | zip | none, zip, rle, zips, piz, dwaa |
-| `output_format` | ARRI LogC3 | Log format for export |
-| `input_is_linear` | true | Input is linear (from Prepare node) |
+| output_size | 4K DCI | Output resolution preset |
+| start_x/y | 0 | Starting pan position |
+| start_zoom | 1.0 | Starting zoom (1.0 = 100%) |
+| end_x/y | 0 | Ending pan position |
+| end_zoom | 1.0 | Ending zoom level |
+| easing | ease_in_out | Animation curve type |
+| rotation_start/end | 0.0 | Rotation in degrees |
+| loop_mode | none | Animation loop behavior |
 
 ### Color Grading Controller
 
 | Setting | Range | Description |
 |---------|-------|-------------|
-| `exposure` | -5 to +5 | Exposure in stops |
-| `contrast` | 0.5 to 2.0 | Contrast around 18% grey |
-| `lift` | -0.5 to 0.5 | Shadow offset |
-| `gamma` | 0.5 to 2.0 | Midtone gamma |
-| `gain` | 0.5 to 2.0 | Highlight multiplier |
-| `saturation` | 0 to 2.0 | Color saturation |
-
-### HDR Curve Editor
-
-| Setting | Range | Description |
-|---------|-------|-------------|
-| `blacks` | -1 to 1 | Black point adjustment |
-| `shadows` | -1 to 1 | Shadow tones |
-| `midtones` | -1 to 1 | Midtone adjustment |
-| `highlights` | -1 to 1 | Highlight tones |
-| `whites` | -1 to 1 | White point adjustment |
+| exposure | -5 to +5 | Exposure in stops |
+| contrast | 0.5 to 2.0 | Contrast around 18% grey |
+| lift | -0.5 to 0.5 | Shadow offset |
+| gamma | 0.5 to 2.0 | Midtone gamma |
+| gain | 0.5 to 2.0 | Highlight multiplier |
+| saturation | 0 to 2.0 | Color saturation |
 
 ### Advanced Color Match
 
-| Setting | Options | Description |
-|---------|---------|-------------|
-| `method` | Histogram Matching, LAB Color Space, Reinhard Transfer, CLAHE + Histogram, CDF Matching | Color calibration algorithm |
-| `strength` | 0.0 to 1.0 | Blend strength (0=no change, 1=full match) |
-| `match_luminance_only` | true/false | Only match brightness, preserve original colors |
-
-**Algorithm Guide:**
-
 | Algorithm | Best For |
 |-----------|----------|
-| **Histogram Matching** | General-purpose, fast, good for most images |
+| **Histogram Matching** | General-purpose, fast |
 | **LAB Color Space** | Better perceptual color accuracy |
-| **Reinhard Transfer** | Classic color transfer, preserves structure |
-| **CLAHE + Histogram** | Local contrast + global color matching |
+| **Reinhard Transfer** | Classic color transfer |
+| **CLAHE + Histogram** | Local contrast + global color |
 | **CDF Matching** | Precise statistical matching |
-
----
-
-## Quality Comparison (v2 vs v1)
-
-| Metric | v1 | v2 |
-|--------|----|----|
-| Unique values | ~4,000 | **42,000+** |
-| Effective bit depth | ~12 bits | **~16 bits** |
-| Log format support | No | **Yes (7 formats)** |
-| Color grading | No | **Yes** |
-| Headroom control | No | **Yes** |
 
 ---
 
 ## Importing into Professional Software
 
 ### DaVinci Resolve
-
-1. Import EXR → Set Input Color Space to match export format (e.g., ARRI LogC3)
-2. Timeline Color Space: DaVinci Wide Gamut / Intermediate
-3. Output: Your delivery format
-
-### After Effects
-
-1. Import EXR sequence
-2. Interpret Footage → Color Management → Input Profile: Match your Log format
-3. Use OCIO or manual LUT for viewing
+1. Import EXR → Set Input Color Space to match (e.g., ACES 2065-1)
+2. Timeline Color Space: DaVinci Wide Gamut / ACEScct
+3. Apply creative grade
+4. Output: Your delivery format
 
 ### Nuke
+1. Read node → Set colorspace to ACES 2065-1 or Linear
+2. Work in scene-linear
+3. Use OCIOColorSpace for view transforms
 
-1. Read node → Set colorspace to match export format
-2. Work in linear space
-3. Use OCIOColorSpace nodes for conversions
+### After Effects
+1. Import EXR sequence
+2. Interpret Footage → Color Management → Input Profile: ACES
+3. Apply OCIO or manual LUT for viewing
 
----
-
-## Verifying Output Quality
-
-Use the **Image Stats** node to verify your output:
-
-```
-[Your Image] → Image Stats
-```
-
-Output shows:
-- Range (should include values > 1.0 for HDR)
-- Unique values (higher = more precision)
-- Effective bit depth estimate
-- Percentage above 1.0 (headroom)
+### Baselight
+1. Import EXR sequence
+2. Set Input Colour Space: ACES 2065-1
+3. Working Space: ACEScct (as per Molinare spec)
 
 ---
 
-## Requirements
+## Quality Verification
 
-| Package | Required | Purpose |
-|---------|----------|---------|
-| `openexr` | **Yes** | True 32-bit EXR writing |
-| `imath` | **Yes** | OpenEXR dependency |
-| `imageio` | Fallback | EXR writing if OpenEXR unavailable |
-| `opencv-python` | Optional | Debanding filter |
+Use the **Image Stats** node to verify output quality:
+
+```
+[Your Processed Image] → Image Stats
+```
+
+Expected output for HDR:
+- Range includes values > 1.0
+- Unique values: 30,000+ (high precision)
+- Effective bit depth: 14-16 bits
+
+---
+
+## Troubleshooting
+
+### "Cannot load EXR" error
+Install pyexr: `pip install pyexr`
+
+### Motion nodes not showing rotation
+Ensure opencv-python is installed: `pip install opencv-python`
+
+### EXR sequence not loading correctly
+- Use `start_frame: 0` to load all frames from beginning
+- Check that frame numbers are in filename (e.g., `shot.1001.exr`)
+
+### Color looks wrong in Resolve
+- Verify Input Color Space matches export format
+- For ACES 2065-1 output, set Input to "ACES 2065-1 (AP0)"
 
 ---
 
@@ -297,5 +365,14 @@ MIT
 
 ## Links
 
-- GitHub: https://github.com/Jorge-Studio/js-exr-upbitrate
-- ComfyUI: https://github.com/comfyanonymous/ComfyUI
+- **GitHub**: https://github.com/Jorge-Studio/js-exr-upbitrate
+- **ComfyUI**: https://github.com/comfyanonymous/ComfyUI
+- **Molinare**: https://www.molinare.co.uk/
+
+---
+
+## Credits
+
+Developed by **Jorge Studio / KS Films** for professional AI-to-cinema pipelines.
+
+Part of the **NodyJS** ecosystem for ComfyUI.

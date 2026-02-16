@@ -1,0 +1,54 @@
+{
+  "last_node_id": 3,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRImage",
+      "pos": [0, 0],
+      "size": [300, 80],
+      "inputs": [],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [1]},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "widgets_values": ["/workspace/runpod-slim/ComfyUI/input/molinaire_test/ComfyUI_ACES_EXR_00048_.exr"],
+      "title": "1. Load EXR Image"
+    },
+    {
+      "id": 2,
+      "type": "ACESToRec709Preview",
+      "pos": [350, 0],
+      "size": [280, 100],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
+      "outputs": [{"name": "preview_image", "type": "IMAGE", "links": [2]}],
+      "widgets_values": [0.0, 2.4],
+      "title": "2. ACES to Rec.709 Preview",
+      "properties": {
+        "exposure": 0.0,
+        "gamma": 2.4
+      }
+    },
+    {
+      "id": 3,
+      "type": "SaveImage",
+      "pos": [680, 0],
+      "size": [280, 100],
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 2}],
+      "outputs": [],
+      "widgets_values": ["Test5_Rec709_Preview"],
+      "title": "3. Save PNG Preview"
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "description": "Convert HDR/ACES content to Rec.709 SDR for quick preview. Uses Rec.1886 gamma (2.4)."
+  },
+  "version": 0.4
+}

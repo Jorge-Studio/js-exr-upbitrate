@@ -1,0 +1,77 @@
+{
+  "last_node_id": 3,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRSequence",
+      "pos": [0, 0],
+      "size": [320, 150],
+      "inputs": [],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [1]},
+        {"name": "frame_count", "type": "INT", "links": []},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "widgets_values": ["/workspace/runpod-slim/ComfyUI/input/molinaire_sequence", 0, 32, 1],
+      "title": "1. Load EXR Sequence",
+      "properties": {
+        "folder_path": "/workspace/runpod-slim/ComfyUI/input/molinaire_sequence",
+        "start_frame": 0,
+        "frame_count": 32,
+        "skip_frames": 1
+      }
+    },
+    {
+      "id": 2,
+      "type": "ACESToRec709Preview",
+      "pos": [370, 0],
+      "size": [280, 100],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
+      "outputs": [{"name": "preview_image", "type": "IMAGE", "links": [2]}],
+      "widgets_values": [0.0, 2.4],
+      "title": "2. Convert to Rec.709 SDR",
+      "properties": {
+        "exposure": 0.0,
+        "gamma": 2.4
+      }
+    },
+    {
+      "id": 3,
+      "type": "VHS_VideoCombine",
+      "pos": [700, 0],
+      "size": [320, 200],
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 2}],
+      "outputs": [],
+      "widgets_values": [24, 0, "Molinaire_Rec709_Preview", "video/h265-mp4", false, true, "yuv420p10le", 18, true],
+      "title": "3. Export H.265 Preview",
+      "properties": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "Molinaire_Rec709_Preview",
+        "format": "video/h265-mp4",
+        "pix_fmt": "yuv420p10le",
+        "crf": 18
+      }
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "description": "Exports EXR sequence as H.265 in Rec.709 color space for quick preview. Tone-mapped from HDR.",
+    "output_specs": {
+      "codec": "HEVC (H.265)",
+      "color_space": "Rec.709",
+      "pixel_format": "yuv420p10le (10-bit 4:2:0)",
+      "frame_rate": "24 fps",
+      "resolution": "3840x2160",
+      "crf": 18
+    }
+  },
+  "version": 0.4
+}

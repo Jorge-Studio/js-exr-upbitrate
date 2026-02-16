@@ -1,0 +1,131 @@
+{
+  "last_node_id": 6,
+  "last_link_id": 5,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRImage",
+      "pos": [0, 0],
+      "size": [300, 80],
+      "inputs": [],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [1]},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "widgets_values": ["/workspace/runpod-slim/ComfyUI/input/molinaire_test/ComfyUI_ACES_EXR_00048_.exr"],
+      "title": "1. Load EXR Image"
+    },
+    {
+      "id": 2,
+      "type": "PrepareImageHighBitDepth",
+      "pos": [350, 0],
+      "size": [280, 130],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [2]}],
+      "widgets_values": [false, 1.0, 1.0],
+      "title": "2. Prepare High Bit Depth (Max Headroom)",
+      "properties": {
+        "input_is_srgb": false,
+        "add_headroom": 1.0,
+        "deband_strength": 1.0
+      }
+    },
+    {
+      "id": 3,
+      "type": "HDRHighlightExpand",
+      "pos": [680, 0],
+      "size": [280, 150],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 2}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [3]}],
+      "widgets_values": [4000.0, 0.15, 0.15, 0.6],
+      "title": "3. HDR Highlight Expand (4000 nits)",
+      "properties": {
+        "target_peak_nits": 4000.0,
+        "threshold": 0.15,
+        "shoulder_softness": 0.15,
+        "expansion_gamma": 0.6
+      }
+    },
+    {
+      "id": 4,
+      "type": "SpecularExpand",
+      "pos": [1010, 0],
+      "size": [280, 200],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 3}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [4]}],
+      "widgets_values": [20.0, 3.0, 0.9, 4.0, 32, 6.0],
+      "title": "4. Specular Expand (Aggressive)",
+      "properties": {
+        "target_peak": 20.0,
+        "power": 3.0,
+        "knee_percentile": 0.9,
+        "contrast_ratio": 4.0,
+        "window_size": 32,
+        "mask_blur": 6.0
+      }
+    },
+    {
+      "id": 5,
+      "type": "PrecisionDeband",
+      "pos": [1340, 0],
+      "size": [280, 180],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 4}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [5]}],
+      "widgets_values": [0.9, 0.4, true, 42, 0.003922, 0.12],
+      "title": "5. Precision Deband (Strong)",
+      "properties": {
+        "gradient_strength": 0.9,
+        "dither_strength": 0.4,
+        "per_channel": true,
+        "seed": 42,
+        "quant_step_override": 0.003922,
+        "gradient_threshold": 0.12
+      }
+    },
+    {
+      "id": 6,
+      "type": "SaveEXRSequence",
+      "pos": [1670, 0],
+      "size": [320, 220],
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 5}],
+      "outputs": [{"name": "output_path", "type": "STRING", "links": []}],
+      "widgets_values": ["Test6_Cinema_HDR_Max", 1, 1001, true, true, "16", "piz"],
+      "title": "6. Save ACES 2065-1 Sequence",
+      "properties": {
+        "shot_name": "Test6_Cinema_HDR_Max",
+        "version": 1,
+        "start_frame": 1001,
+        "input_is_linear": true,
+        "convert_to_aces": true,
+        "bit_depth": "16",
+        "compression": "piz"
+      }
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"],
+    [3, 3, 0, 4, 0, "IMAGE"],
+    [4, 4, 0, 5, 0, "IMAGE"],
+    [5, 5, 0, 6, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "HDR Processing",
+      "bounding": [350, -50, 1000, 300],
+      "color": "#8e7b3f"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "description": "Maximum HDR expansion pipeline for cinema delivery. 4000 nits target, aggressive specular expansion, full ACES output.",
+    "molinare_compliance": {
+      "color_space": "ACES 2065-1 (AP0)",
+      "bit_depth": "16-bit half-float",
+      "compression": "PIZ",
+      "peak_brightness": "4000 nits (HDR10+)"
+    }
+  },
+  "version": 0.4
+}

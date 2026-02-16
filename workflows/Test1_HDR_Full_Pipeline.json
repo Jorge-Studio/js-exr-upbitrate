@@ -1,0 +1,91 @@
+{
+  "last_node_id": 5,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRImage",
+      "pos": [0, 0],
+      "size": [300, 80],
+      "inputs": [],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [1]},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "widgets_values": ["/workspace/runpod-slim/ComfyUI/input/molinaire_test/ComfyUI_ACES_EXR_00048_.exr"],
+      "title": "1. Load EXR Image"
+    },
+    {
+      "id": 2,
+      "type": "PrepareImageHighBitDepth",
+      "pos": [350, 0],
+      "size": [280, 130],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [2]}],
+      "widgets_values": [false, 0.5, 1.0],
+      "title": "2. Prepare High Bit Depth",
+      "properties": {
+        "input_is_srgb": false,
+        "add_headroom": 0.5,
+        "deband_strength": 1.0
+      }
+    },
+    {
+      "id": 3,
+      "type": "HDRHighlightExpand",
+      "pos": [680, 0],
+      "size": [280, 150],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 2}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [3]}],
+      "widgets_values": [1000.0, 0.2, 0.1, 0.7],
+      "title": "3. HDR Highlight Expand",
+      "properties": {
+        "target_peak_nits": 1000.0,
+        "threshold": 0.2,
+        "shoulder_softness": 0.1,
+        "expansion_gamma": 0.7
+      }
+    },
+    {
+      "id": 4,
+      "type": "PrecisionDeband",
+      "pos": [1010, 0],
+      "size": [280, 180],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 3}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [4]}],
+      "widgets_values": [0.8, 0.3, true, 42, 0.003922, 0.15],
+      "title": "4. Precision Deband",
+      "properties": {
+        "gradient_strength": 0.8,
+        "dither_strength": 0.3,
+        "per_channel": true,
+        "seed": 42,
+        "quant_step_override": 0.003922,
+        "gradient_threshold": 0.15
+      }
+    },
+    {
+      "id": 5,
+      "type": "SaveImageEXR",
+      "pos": [1340, 0],
+      "size": [280, 150],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 4}],
+      "outputs": [],
+      "widgets_values": ["Test1_HDR_Full_Pipeline", "Linear", "16", "piz"],
+      "title": "5. Save EXR (16-bit PIZ)"
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"],
+    [3, 3, 0, 4, 0, "IMAGE"],
+    [4, 4, 0, 5, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "description": "Full HDR processing pipeline: Load EXR → Prepare for HDR → Expand highlights → Deband → Save"
+  },
+  "version": 0.4
+}

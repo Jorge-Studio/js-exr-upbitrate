@@ -1,0 +1,75 @@
+{
+  "last_node_id": 3,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRSequence",
+      "pos": [0, 0],
+      "size": [320, 150],
+      "inputs": [],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [1]},
+        {"name": "frame_count", "type": "INT", "links": []},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "widgets_values": ["/workspace/runpod-slim/ComfyUI/input/molinaire_sequence", 0, 32, 1],
+      "title": "1. Load EXR Sequence",
+      "properties": {
+        "folder_path": "/workspace/runpod-slim/ComfyUI/input/molinaire_sequence",
+        "start_frame": 0,
+        "frame_count": 32,
+        "skip_frames": 1
+      }
+    },
+    {
+      "id": 2,
+      "type": "ColorSpaceConverter",
+      "pos": [370, 0],
+      "size": [280, 100],
+      "inputs": [{"name": "image", "type": "IMAGE", "link": 1}],
+      "outputs": [{"name": "IMAGE", "type": "IMAGE", "links": [2]}],
+      "widgets_values": ["Linear", "ARRI LogC3"],
+      "title": "2. Convert to ARRI LogC3",
+      "properties": {
+        "input_space": "Linear",
+        "output_space": "ARRI LogC3"
+      }
+    },
+    {
+      "id": 3,
+      "type": "VHS_VideoCombine",
+      "pos": [700, 0],
+      "size": [320, 200],
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 2}],
+      "outputs": [],
+      "widgets_values": [24, 0, "Molinaire_LogC3_ProRes4444", "video/ProRes", false, true, "4444"],
+      "title": "3. Export ProRes 4444",
+      "properties": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "Molinaire_LogC3_ProRes4444",
+        "format": "video/ProRes",
+        "profile": "4444"
+      }
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "description": "Exports EXR sequence as ProRes 4444 in ARRI LogC3 color space. Ready for DaVinci Resolve or Baselight.",
+    "output_specs": {
+      "codec": "ProRes 4444",
+      "color_space": "ARRI LogC3",
+      "pixel_format": "yuv444p12le (12-bit 4:4:4)",
+      "frame_rate": "24 fps",
+      "resolution": "3840x2160"
+    }
+  },
+  "version": 0.4
+}

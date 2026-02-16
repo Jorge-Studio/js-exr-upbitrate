@@ -2,8 +2,14 @@
 openexr>=3.2.0
 imath>=3.1.0
 
-# Fallback for EXR writing
+# EXR reading/writing alternatives
+pyexr>=0.3.0
 imageio>=2.31.0
 
-# Optional: for debanding and bilateral filter
+# Image processing and debanding
 opencv-python>=4.8.0
+pillow>=9.0.0
+
+# Scientific computing (for motion analysis)
+scipy>=1.10.0
+numpy>=1.24.0
