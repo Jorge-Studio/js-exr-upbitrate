@@ -1304,6 +1304,10 @@ from .luminance_deflicker import (
     LUMINANCE_DEFLICKER_NODES,
     LUMINANCE_DEFLICKER_DISPLAY_NAMES,
 )
+from .exposure_bracketing import (
+    EXPOSURE_BRACKETING_NODES,
+    EXPOSURE_BRACKETING_DISPLAY_NAMES,
+)
 
 # =============================================================================
 # NODE MAPPINGS
@@ -1331,6 +1335,9 @@ NODE_CLASS_MAPPINGS.update(ANIMATED_MOTION_NODES)
 # Add Luminance Deflicker nodes
 NODE_CLASS_MAPPINGS.update(LUMINANCE_DEFLICKER_NODES)
 
+# Add Exposure Bracketing nodes
+NODE_CLASS_MAPPINGS.update(EXPOSURE_BRACKETING_NODES)
+
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ColorSpaceConverter": "Color Space Converter",
     "ColorGradingController": "Color Grading Controller",
@@ -1352,6 +1359,9 @@ NODE_DISPLAY_NAME_MAPPINGS.update(ANIMATED_MOTION_DISPLAY_NAMES)
 
 # Add Luminance Deflicker display names
 NODE_DISPLAY_NAME_MAPPINGS.update(LUMINANCE_DEFLICKER_DISPLAY_NAMES)
+
+# Add Exposure Bracketing display names
+NODE_DISPLAY_NAME_MAPPINGS.update(EXPOSURE_BRACKETING_DISPLAY_NAMES)
 
 WEB_DIRECTORY = "./js"
 

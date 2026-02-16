@@ -1,0 +1,263 @@
+{
+  "last_node_id": 12,
+  "last_link_id": 15,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "VideoToExposureBrackets",
+      "pos": [100, 200],
+      "size": [350, 250],
+      "title": "1. Load Video/EXR → Generate Brackets",
+      "inputs": [],
+      "outputs": [
+        {"name": "ev_plus_4", "type": "IMAGE", "links": [1]},
+        {"name": "ev_plus_2", "type": "IMAGE", "links": [2]},
+        {"name": "ev_0", "type": "IMAGE", "links": [3, 10, 11]},
+        {"name": "ev_minus_2", "type": "IMAGE", "links": [4]},
+        {"name": "ev_minus_4", "type": "IMAGE", "links": [5]},
+        {"name": "original", "type": "IMAGE", "links": []}
+      ],
+      "properties": {
+        "source_path": "/path/to/video.mov or /path/to/exr_folder",
+        "source_type": "video",
+        "frame_limit": 0,
+        "exposure_step": 2.0,
+        "method": "gamma_aware",
+        "start_frame": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "DeterministicHDRMerge5",
+      "pos": [500, 200],
+      "size": [350, 280],
+      "title": "2. HDR Merge (5 Brackets)",
+      "inputs": [
+        {"name": "ev_plus_4", "type": "IMAGE", "link": 1},
+        {"name": "ev_plus_2", "type": "IMAGE", "link": 2},
+        {"name": "ev_0", "type": "IMAGE", "link": 3},
+        {"name": "ev_minus_2", "type": "IMAGE", "link": 4},
+        {"name": "ev_minus_4", "type": "IMAGE", "link": 5}
+      ],
+      "outputs": [
+        {"name": "hdr_image", "type": "IMAGE", "links": [6]}
+      ],
+      "properties": {
+        "exposure_step": 2.0,
+        "exposure_adjust": 1.0,
+        "hdr_algorithm": "exposure_weighted",
+        "auto_calibrate": true,
+        "debevec_exposure_comp": -8,
+        "debevec_anti_banding": true
+      }
+    },
+    {
+      "id": 3,
+      "type": "PrecisionDeband",
+      "pos": [900, 200],
+      "size": [300, 220],
+      "title": "3. Precision Deband",
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 6}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [7]}
+      ],
+      "properties": {
+        "gradient_strength": 0.8,
+        "dither_strength": 0.3,
+        "per_channel": true,
+        "seed": 42,
+        "quant_step_override": 0,
+        "gradient_threshold": 0.15
+      }
+    },
+    {
+      "id": 4,
+      "type": "HDRHighlightExpand",
+      "pos": [1250, 200],
+      "size": [300, 320],
+      "title": "4. HDR Highlight Expand",
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 7}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [8]}
+      ],
+      "properties": {
+        "target_peak_nits": 1000,
+        "threshold": 0.6,
+        "shoulder_softness": 0.15,
+        "expansion_gamma": 0.75,
+        "source_peak_nits": 350,
+        "hue_tolerance": 0.15,
+        "luminance_mode": "rec709",
+        "post_dither": 0.5,
+        "dither_seed": 42,
+        "shadow_expansion": 0,
+        "shadow_cutoff": 0.05
+      }
+    },
+    {
+      "id": 5,
+      "type": "HueLockedMerge",
+      "pos": [1600, 200],
+      "size": [280, 260],
+      "title": "5. Hue Locked Merge (Skin Protection)",
+      "inputs": [
+        {"name": "merged_image", "type": "IMAGE", "link": 8},
+        {"name": "ev0_bracket", "type": "IMAGE", "link": 10}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [9]}
+      ],
+      "properties": {
+        "skin_hue_centre": 28,
+        "skin_hue_width": 18,
+        "skin_sat_min": 0.15,
+        "skin_sat_max": 0.65,
+        "skin_lum_min": 0.05,
+        "skin_lum_max": 1.2,
+        "mask_blur": 3,
+        "hue_blend": 1
+      }
+    },
+    {
+      "id": 6,
+      "type": "GuidedShadowDenoise",
+      "pos": [1930, 200],
+      "size": [300, 180],
+      "title": "6. Guided Shadow Denoise",
+      "inputs": [
+        {"name": "hdr_image", "type": "IMAGE", "link": 9},
+        {"name": "sdr_guide", "type": "IMAGE", "link": 11}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [12]}
+      ],
+      "properties": {
+        "shadow_floor": 0.05,
+        "shadow_ceiling": 0.2,
+        "filter_radius": 4,
+        "epsilon": 0.001,
+        "strength": 0.8
+      }
+    },
+    {
+      "id": 7,
+      "type": "LuminanceDeflicker",
+      "pos": [2280, 200],
+      "size": [350, 200],
+      "title": "7. Luminance Deflicker (No Blur)",
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 12}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [13, 14]}
+      ],
+      "properties": {
+        "method": "gain_only",
+        "smoothing_window": 7,
+        "strength": 1.0,
+        "reference_frame": "average",
+        "protect_highlights": true,
+        "max_correction": 1.5
+      }
+    },
+    {
+      "id": 8,
+      "type": "SaveEXRClean",
+      "pos": [2680, 100],
+      "size": [280, 280],
+      "title": "8a. Save EXR (ACES)",
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 13}
+      ],
+      "outputs": [],
+      "properties": {
+        "filename_prefix": "output/BitDepth_HDR",
+        "bit_depth": "16",
+        "compression": "piz",
+        "aces_output": true,
+        "input_is_linear": true,
+        "exposure_stops": 0,
+        "auto_expose": "off",
+        "target_peak": 2,
+        "dither_mode": "none",
+        "dither_seed": 42
+      }
+    },
+    {
+      "id": 9,
+      "type": "VHS_VideoCombine",
+      "pos": [2680, 420],
+      "size": [350, 300],
+      "title": "8b. Reference Video",
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 14}
+      ],
+      "outputs": [],
+      "properties": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "BitDepth_HDR_ref",
+        "format": "video/h265-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "pix_fmt": "yuv420p10le",
+        "crf": 18
+      }
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 1, 1, 2, 1, "IMAGE"],
+    [3, 1, 2, 2, 2, "IMAGE"],
+    [4, 1, 3, 2, 3, "IMAGE"],
+    [5, 1, 4, 2, 4, "IMAGE"],
+    [6, 2, 0, 3, 0, "IMAGE"],
+    [7, 3, 0, 4, 0, "IMAGE"],
+    [8, 4, 0, 5, 0, "IMAGE"],
+    [9, 5, 0, 6, 0, "IMAGE"],
+    [10, 1, 2, 5, 1, "IMAGE"],
+    [11, 1, 2, 6, 1, "IMAGE"],
+    [12, 6, 0, 7, 0, "IMAGE"],
+    [13, 7, 0, 8, 0, "IMAGE"],
+    [14, 7, 0, 9, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "Bit-Depth Expansion from Single Source",
+      "bounding": [80, 50, 3000, 750],
+      "color": "#8A8"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "description": "Bit-Depth Expansion Pipeline - Single Source Input",
+    "notes": [
+      "This workflow replicates the multi-bracket HDR workflow but from a SINGLE source.",
+      "",
+      "ORIGINAL WORKFLOW:",
+      "- Required 5 pre-rendered image sequences at different exposures",
+      "- Created externally in Luma/DaVinci",
+      "",
+      "THIS WORKFLOW:",
+      "- Takes a single video or EXR sequence",
+      "- Generates 5 exposure brackets internally (+4, +2, 0, -2, -4 EV)",
+      "- Feeds them through the same HDR merge pipeline",
+      "",
+      "NODES USED:",
+      "1. VideoToExposureBrackets - Load source + generate brackets",
+      "2. DeterministicHDRMerge5 - Merge brackets into HDR",
+      "3. PrecisionDeband - Remove banding artifacts",
+      "4. HDRHighlightExpand - Expand highlight range",
+      "5. HueLockedMerge - Preserve skin tones",
+      "6. GuidedShadowDenoise - Clean up shadows",
+      "7. LuminanceDeflicker - Stabilize brightness (no blur)",
+      "8. SaveEXRClean + VHS_VideoCombine - Output"
+    ],
+    "original_workflow": "Bit_Depth_Workflow_v001.json"
+  },
+  "version": 0.4
+}
