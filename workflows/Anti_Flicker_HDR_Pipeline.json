@@ -1,0 +1,330 @@
+{
+  "last_node_id": 20,
+  "last_link_id": 25,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRSequence",
+      "pos": [50, 300],
+      "size": [300, 150],
+      "inputs": [],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [1, 2, 3, 4, 5]},
+        {"name": "frame_count", "type": "INT", "links": []},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        "/path/to/your/exr/sequence",
+        0,
+        120,
+        1
+      ],
+      "title": "1. Load Source Sequence"
+    },
+    {
+      "id": 2,
+      "type": "ColorGradingController",
+      "pos": [400, 50],
+      "size": [250, 200],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 1}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [6]},
+        {"name": "preview", "type": "IMAGE", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        4.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        true
+      ],
+      "title": "2a. Exposure +4 stops"
+    },
+    {
+      "id": 3,
+      "type": "ColorGradingController",
+      "pos": [400, 280],
+      "size": [250, 200],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 2}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [7]},
+        {"name": "preview", "type": "IMAGE", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        2.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        true
+      ],
+      "title": "2b. Exposure +2 stops"
+    },
+    {
+      "id": 4,
+      "type": "ColorGradingController",
+      "pos": [400, 510],
+      "size": [250, 200],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 3}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [8]},
+        {"name": "preview", "type": "IMAGE", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        true
+      ],
+      "title": "2c. Base Exposure (0 stops)"
+    },
+    {
+      "id": 5,
+      "type": "ColorGradingController",
+      "pos": [400, 740],
+      "size": [250, 200],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 4}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [9]},
+        {"name": "preview", "type": "IMAGE", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        -2.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        true
+      ],
+      "title": "2d. Exposure -2 stops"
+    },
+    {
+      "id": 6,
+      "type": "ColorGradingController",
+      "pos": [400, 970],
+      "size": [250, 200],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 5}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [10]},
+        {"name": "preview", "type": "IMAGE", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        -4.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        true
+      ],
+      "title": "2e. Exposure -4 stops"
+    },
+    {
+      "id": 7,
+      "type": "DeterministicHDRMerge5",
+      "pos": [700, 400],
+      "size": [320, 280],
+      "inputs": [
+        {"name": "ev_plus4", "type": "IMAGE", "link": 6},
+        {"name": "ev_plus2", "type": "IMAGE", "link": 7},
+        {"name": "ev_0", "type": "IMAGE", "link": 8},
+        {"name": "ev_minus2", "type": "IMAGE", "link": 9},
+        {"name": "ev_minus4", "type": "IMAGE", "link": 10}
+      ],
+      "outputs": [
+        {"name": "hdr_image", "type": "IMAGE", "links": [11]},
+        {"name": "merge_info", "type": "STRING", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        "luminance_anchored",
+        false
+      ],
+      "title": "3. HDR Merge (5 brackets)"
+    },
+    {
+      "id": 8,
+      "type": "PrecisionDeband",
+      "pos": [1070, 400],
+      "size": [280, 180],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 11}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [12]},
+        {"name": "deband_mask", "type": "IMAGE", "links": []},
+        {"name": "deband_info", "type": "STRING", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        0.3,
+        0.002,
+        3.0,
+        5
+      ],
+      "title": "4. Precision Deband"
+    },
+    {
+      "id": 9,
+      "type": "TemporalStabiliser",
+      "pos": [1400, 300],
+      "size": [300, 220],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 12}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [13]},
+        {"name": "stabiliser_mask", "type": "IMAGE", "links": []},
+        {"name": "stabiliser_info", "type": "STRING", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        5,
+        0.001,
+        0.9,
+        5,
+        2.0
+      ],
+      "title": "5. Temporal Stabiliser (Key for Flicker)"
+    },
+    {
+      "id": 10,
+      "type": "GradientDeflicker",
+      "pos": [1400, 560],
+      "size": [300, 250],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 13}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [14]},
+        {"name": "gradient_mask", "type": "IMAGE", "links": []},
+        {"name": "deflicker_info", "type": "STRING", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        0.85,
+        61,
+        "rolling",
+        0.01,
+        24,
+        false,
+        8,
+        true,
+        0.01,
+        2.0
+      ],
+      "title": "6. Gradient Deflicker (Key for Flicker)"
+    },
+    {
+      "id": 11,
+      "type": "ColorSpaceConverter",
+      "pos": [1750, 400],
+      "size": [280, 120],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 14}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [15, 16]}
+      ],
+      "properties": {},
+      "widgets_values": [
+        "Linear",
+        "ARRI LogC3"
+      ],
+      "title": "7. Convert to LogC3"
+    },
+    {
+      "id": 12,
+      "type": "VHS_VideoCombine",
+      "pos": [2100, 300],
+      "size": [280, 250],
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 15}
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        24,
+        0,
+        "StableVideo_LogC3_ProRes4444",
+        "video/ProRes",
+        false,
+        true,
+        "4444"
+      ],
+      "title": "8a. Export ProRes 4444"
+    },
+    {
+      "id": 13,
+      "type": "SaveImageEXR",
+      "pos": [2100, 600],
+      "size": [280, 200],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 16}
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "StableVideo_EXR",
+        32,
+        "zip",
+        "Linear",
+        true
+      ],
+      "title": "8b. Save EXR Sequence"
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 1, 0, 3, 0, "IMAGE"],
+    [3, 1, 0, 4, 0, "IMAGE"],
+    [4, 1, 0, 5, 0, "IMAGE"],
+    [5, 1, 0, 6, 0, "IMAGE"],
+    [6, 2, 0, 7, 0, "IMAGE"],
+    [7, 3, 0, 7, 1, "IMAGE"],
+    [8, 4, 0, 7, 2, "IMAGE"],
+    [9, 5, 0, 7, 3, "IMAGE"],
+    [10, 6, 0, 7, 4, "IMAGE"],
+    [11, 7, 0, 8, 0, "IMAGE"],
+    [12, 8, 0, 9, 0, "IMAGE"],
+    [13, 9, 0, 10, 0, "IMAGE"],
+    [14, 10, 0, 11, 0, "IMAGE"],
+    [15, 11, 0, 12, 0, "IMAGE"],
+    [16, 11, 0, 13, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "ANTI-FLICKER HDR PIPELINE",
+      "bounding": [30, -50, 2400, 1300],
+      "color": "#8B5CF6"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {"scale": 0.6, "offset": [100, 200]}
+  }
+}

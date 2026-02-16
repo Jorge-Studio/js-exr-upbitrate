@@ -1,0 +1,183 @@
+{
+  "last_node_id": 8,
+  "last_link_id": 10,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRSequence",
+      "pos": [50, 200],
+      "size": [300, 150],
+      "inputs": [],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [1]},
+        {"name": "frame_count", "type": "INT", "links": []},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        "/Users/letwit/Downloads/Molinaire/Test Sequence 3",
+        0,
+        120,
+        1
+      ],
+      "title": "1. Load Video/EXR Sequence"
+    },
+    {
+      "id": 2,
+      "type": "TemporalStabiliser",
+      "pos": [400, 150],
+      "size": [320, 240],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 1}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [2]},
+        {"name": "stabiliser_mask", "type": "IMAGE", "links": [5]},
+        {"name": "stabiliser_info", "type": "STRING", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        5,
+        0.0008,
+        0.95,
+        7,
+        2.5
+      ],
+      "title": "2. Temporal Stabiliser (CRITICAL)"
+    },
+    {
+      "id": 3,
+      "type": "GradientDeflicker",
+      "pos": [400, 430],
+      "size": [320, 280],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 2}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [3]},
+        {"name": "gradient_mask", "type": "IMAGE", "links": [6]},
+        {"name": "deflicker_info", "type": "STRING", "links": []}
+      ],
+      "properties": {},
+      "widgets_values": [
+        0.9,
+        81,
+        "rolling",
+        0.005,
+        12,
+        false,
+        12,
+        true,
+        0.008,
+        2.5
+      ],
+      "title": "3. Gradient Deflicker (CRITICAL)"
+    },
+    {
+      "id": 4,
+      "type": "ColorSpaceConverter",
+      "pos": [780, 300],
+      "size": [260, 120],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 3}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [4, 7]}
+      ],
+      "properties": {},
+      "widgets_values": [
+        "Linear",
+        "ARRI LogC3"
+      ],
+      "title": "4. Convert to LogC3"
+    },
+    {
+      "id": 5,
+      "type": "VHS_VideoCombine",
+      "pos": [1100, 200],
+      "size": [280, 250],
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 4}
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        24,
+        0,
+        "Deflickered_LogC3_ProRes4444",
+        "video/ProRes",
+        false,
+        true,
+        "4444"
+      ],
+      "title": "5. Export ProRes 4444 (Stabilised)"
+    },
+    {
+      "id": 6,
+      "type": "PreviewImage",
+      "pos": [780, 500],
+      "size": [200, 200],
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 5}
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Temporal Mask Preview"
+    },
+    {
+      "id": 7,
+      "type": "PreviewImage",
+      "pos": [780, 740],
+      "size": [200, 200],
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 6}
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Gradient Mask Preview"
+    },
+    {
+      "id": 8,
+      "type": "ACESToRec709Preview",
+      "pos": [1100, 500],
+      "size": [260, 150],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 7}
+      ],
+      "outputs": [
+        {"name": "preview_image", "type": "IMAGE", "links": [8]}
+      ],
+      "properties": {},
+      "widgets_values": [
+        0.0,
+        2.4
+      ],
+      "title": "6. Rec.709 Preview"
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"],
+    [3, 3, 0, 4, 0, "IMAGE"],
+    [4, 4, 0, 5, 0, "IMAGE"],
+    [5, 2, 1, 6, 0, "IMAGE"],
+    [6, 3, 1, 7, 0, "IMAGE"],
+    [7, 4, 0, 8, 0, "IMAGE"],
+    [8, 8, 0, 5, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "QUICK DEFLICKER - Minimum 3+ Frames Required",
+      "bounding": [30, 80, 1400, 900],
+      "color": "#22C55E"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {"scale": 0.8, "offset": [50, 100]},
+    "info": "This workflow removes flicker from AI-generated or problematic video. Requires batch of 3+ frames minimum. Adjust temporal_radius and strength based on flicker severity."
+  }
+}
