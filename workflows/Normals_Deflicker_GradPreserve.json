@@ -1,0 +1,124 @@
+{
+  "last_node_id": 4,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRSequence",
+      "pos": [100, 200],
+      "size": [300, 150],
+      "inputs": [],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [1]},
+        {"name": "frame_count", "type": "INT", "links": []},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "widgets_values": [
+        "/path/to/your/exr_sequence",
+        0,
+        121,
+        1
+      ],
+      "properties": {
+        "folder_path": "/path/to/your/exr_sequence",
+        "start_frame": 0,
+        "frame_count": 121,
+        "skip_frames": 1
+      }
+    },
+    {
+      "id": 2,
+      "type": "NormalsDeflicker",
+      "pos": [450, 200],
+      "size": [350, 180],
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 1}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [2]},
+        {"name": "correction_info", "type": "STRING", "links": []}
+      ],
+      "widgets_values": [
+        0.3,
+        2,
+        true
+      ],
+      "properties": {
+        "gradient_smoothing": 0.3,
+        "temporal_radius": 2,
+        "preserve_luminance": true
+      },
+      "title": "Normals Deflicker (Gradient Preserve)"
+    },
+    {
+      "id": 3,
+      "type": "ColorSpaceConverter",
+      "pos": [850, 200],
+      "size": [280, 100],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 2}
+      ],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [3]}
+      ],
+      "widgets_values": [
+        "Linear",
+        "ARRI LogC3"
+      ],
+      "properties": {
+        "input_space": "Linear",
+        "output_space": "ARRI LogC3"
+      }
+    },
+    {
+      "id": 4,
+      "type": "VHS_VideoCombine",
+      "pos": [1180, 200],
+      "size": [350, 300],
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 3}
+      ],
+      "outputs": [],
+      "widgets_values": [
+        24,
+        0,
+        "720p_NormalsDeflicker_GradPreserve",
+        "video/h265-mp4",
+        false,
+        true,
+        "yuv420p10le",
+        18,
+        true
+      ],
+      "properties": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "720p_NormalsDeflicker_GradPreserve",
+        "format": "video/h265-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "pix_fmt": "yuv420p10le",
+        "crf": 18,
+        "save_metadata": true
+      }
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"],
+    [3, 3, 0, 4, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "description": "Normals/Gradient-Preserving Deflicker",
+    "notes": "This workflow stabilizes surface detail (gradients/normals) while preserving original luminance. Works by extracting image gradients, smoothing them temporally, then reconstructing with original brightness. Good for subtle flicker in textures without affecting overall exposure.",
+    "settings": {
+      "gradient_smoothing": "0.3 (30%) - How much to blend gradients with neighbors. Lower = more original detail.",
+      "temporal_radius": "2 frames - How many frames each side to average gradients. Keep low to avoid motion issues.",
+      "preserve_luminance": "true - Keep original frame brightness (recommended)"
+    }
+  },
+  "version": 0.4
+}

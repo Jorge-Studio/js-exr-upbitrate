@@ -1,8 +1,8 @@
-# High Bit Depth EXR Export & Cinema Delivery for ComfyUI (v3.0)
+# High Bit Depth EXR Export & Cinema Delivery for ComfyUI (v3.1)
 
-Professional-grade EXR export with **Log format support**, **color grading controls**, **cinema delivery compliance**, **motion animation**, and **maximum tonal precision** for VFX, film, compositing, and color grading workflows.
+Professional-grade EXR export with **Log format support**, **color grading controls**, **cinema delivery compliance**, **motion animation**, **luminance-preserving deflicker**, and **maximum tonal precision** for VFX, film, compositing, and color grading workflows.
 
-**Now includes full Molinare/Professional DI delivery support!**
+**Now includes full Molinare/Professional DI delivery support + blur-free deflicker!**
 
 ---
 
@@ -19,7 +19,16 @@ Professional-grade EXR export with **Log format support**, **color grading contr
 
 ---
 
-## What's New in v3.0
+## What's New in v3.1
+
+### Luminance-Preserving Deflicker (NEW!)
+- **Luminance Deflicker**: Fix frame-to-frame brightness flicker **without blur**
+  - Uses per-frame gain correction instead of pixel averaging
+  - Methods: `gain_only`, `gain_and_offset`, `histogram_match`
+  - Zero spatial processing = zero blur
+- **Normals Deflicker**: Stabilize gradients/surface detail while preserving luminance
+  - Works on image gradients (edges, textures)
+  - Temporally smooth micro-flicker without affecting sharpness
 
 ### Cinema Delivery Nodes (Molinare Compliant)
 - **Save EXR Sequence**: Export video frames as numbered EXR sequence with ACES 2065-1 color space
@@ -69,7 +78,7 @@ pip install -r requirements.txt
 
 ---
 
-## All Nodes (18 Total)
+## All Nodes (20 Total)
 
 ### Core Color & EXR Nodes (10)
 
@@ -103,6 +112,13 @@ pip install -r requirements.txt
 | **Load EXR Sequence** | Load EXR sequence as video batch |
 | **Extract Motion from Video** | Optical flow motion path extraction |
 | **Apply Motion Path** | Apply motion to image/video sequences |
+
+### Deflicker Nodes (2)
+
+| Node | Description |
+|------|-------------|
+| **Luminance Deflicker** | Per-frame gain correction for brightness flicker (NO BLUR) |
+| **Normals Deflicker** | Gradient-preserving temporal smoothing (preserves luminance) |
 
 ---
 
@@ -209,6 +225,54 @@ Apply Motion Path ← [motion_path]
 
 ---
 
+## Deflicker Guide
+
+### The Problem
+
+AI-generated video often has frame-to-frame brightness or texture flicker that traditional temporal averaging cannot fix without causing blur.
+
+### The Solution
+
+Our deflicker nodes work **on measurements, not pixels**:
+
+| Method | How It Works | Best For |
+|--------|--------------|----------|
+| **Luminance Deflicker (gain_only)** | Measures frame brightness, smooths the curve, applies gain correction | Brightness pumping, exposure flicker |
+| **Luminance Deflicker (histogram_match)** | Matches each frame's histogram to a reference | Color/tonal inconsistency |
+| **Normals Deflicker** | Smooths image gradients while preserving luminance | Texture flicker, grain dancing |
+
+### Why No Blur?
+
+Traditional deflicker averages pixel colors across frames → **blur**.
+
+Our approach:
+1. **Measure** what's varying (brightness level, gradient stability)
+2. **Smooth** the measurement, not the pixels
+3. **Apply** a correction factor per frame
+
+Result: Every pixel keeps its original relationship to neighbors = **zero blur**.
+
+### Deflicker Workflow
+
+```
+[EXR Sequence with Flicker]
+    ↓
+Load EXR Sequence
+    ↓
+Luminance Deflicker
+    └─ method: gain_only
+    └─ smoothing_window: 7
+    └─ strength: 1.0
+    ↓
+[Optional: Normals Deflicker for texture]
+    ↓
+Color Space Converter (Linear → LogC3)
+    ↓
+VHS_VideoCombine (H.265/ProRes output)
+```
+
+---
+
 ## Log Format Guide
 
 | Format | Use Case |
@@ -246,6 +310,17 @@ Apply Motion Path ← [motion_path]
 |----------|-------------|
 | `Video_ProRes4444_LogC3.json` | ProRes 4444 video export in LogC3 |
 | `Video_H265_Rec709_Preview.json` | H.265 preview video for QC |
+
+### Deflicker Workflows
+| Workflow | Description |
+|----------|-------------|
+| `Luminance_Deflicker_NoBlur.json` | Brightness correction without blur |
+| `Normals_Deflicker_GradPreserve.json` | Gradient-based flicker reduction |
+
+### Molinare Delivery Workflow
+| Workflow | Description |
+|----------|-------------|
+| `Molinare_Delivery_Workflow.json` | Complete spec-compliant delivery pipeline |
 
 ---
 

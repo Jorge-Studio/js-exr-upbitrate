@@ -1,0 +1,133 @@
+{
+  "last_node_id": 4,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRSequence",
+      "pos": [100, 200],
+      "size": [300, 150],
+      "inputs": [],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [1]},
+        {"name": "frame_count", "type": "INT", "links": []},
+        {"name": "width", "type": "INT", "links": []},
+        {"name": "height", "type": "INT", "links": []}
+      ],
+      "widgets_values": [
+        "/path/to/your/exr_sequence",
+        0,
+        121,
+        1
+      ],
+      "properties": {
+        "folder_path": "/path/to/your/exr_sequence",
+        "start_frame": 0,
+        "frame_count": 121,
+        "skip_frames": 1
+      }
+    },
+    {
+      "id": 2,
+      "type": "LuminanceDeflicker",
+      "pos": [450, 200],
+      "size": [350, 220],
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 1}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [2]},
+        {"name": "correction_info", "type": "STRING", "links": []}
+      ],
+      "widgets_values": [
+        "gain_only",
+        7,
+        1.0,
+        "average",
+        true,
+        1.5
+      ],
+      "properties": {
+        "method": "gain_only",
+        "smoothing_window": 7,
+        "strength": 1.0,
+        "reference_frame": "average",
+        "protect_highlights": true,
+        "max_correction": 1.5
+      },
+      "title": "Luminance Deflicker (No Blur)"
+    },
+    {
+      "id": 3,
+      "type": "ColorSpaceConverter",
+      "pos": [850, 200],
+      "size": [280, 100],
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 2}
+      ],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [3]}
+      ],
+      "widgets_values": [
+        "Linear",
+        "ARRI LogC3"
+      ],
+      "properties": {
+        "input_space": "Linear",
+        "output_space": "ARRI LogC3"
+      }
+    },
+    {
+      "id": 4,
+      "type": "VHS_VideoCombine",
+      "pos": [1180, 200],
+      "size": [350, 300],
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 3}
+      ],
+      "outputs": [],
+      "widgets_values": [
+        24,
+        0,
+        "720p_LuminanceDeflicker_NoBlur",
+        "video/h265-mp4",
+        false,
+        true,
+        "yuv420p10le",
+        18,
+        true
+      ],
+      "properties": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "720p_LuminanceDeflicker_NoBlur",
+        "format": "video/h265-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "pix_fmt": "yuv420p10le",
+        "crf": 18,
+        "save_metadata": true
+      }
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"],
+    [3, 3, 0, 4, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "description": "Luminance-Preserving Deflicker - NO BLUR",
+    "notes": "This workflow corrects frame-to-frame brightness variations WITHOUT blurring. It measures average luminance per frame, smooths the luminance curve temporally, then applies a simple gain multiplier. Zero spatial processing = zero blur.",
+    "settings": {
+      "method": "gain_only - Simple multiplicative brightness correction",
+      "smoothing_window": "7 frames - How many frames for averaging the luminance curve",
+      "strength": "1.0 - Full correction (0.5 = half correction)",
+      "reference_frame": "average - Target brightness is average of all frames",
+      "protect_highlights": "true - Prevents clipping when boosting dark frames",
+      "max_correction": "1.5 - Maximum gain factor to prevent extreme corrections"
+    }
+  },
+  "version": 0.4
+}

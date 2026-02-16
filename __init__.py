@@ -1300,6 +1300,10 @@ from .animated_motion import (
     ANIMATED_MOTION_NODES,
     ANIMATED_MOTION_DISPLAY_NAMES,
 )
+from .luminance_deflicker import (
+    LUMINANCE_DEFLICKER_NODES,
+    LUMINANCE_DEFLICKER_DISPLAY_NAMES,
+)
 
 # =============================================================================
 # NODE MAPPINGS
@@ -1324,6 +1328,9 @@ NODE_CLASS_MAPPINGS.update(CINEMA_DELIVERY_NODES)
 # Add Animated Motion nodes
 NODE_CLASS_MAPPINGS.update(ANIMATED_MOTION_NODES)
 
+# Add Luminance Deflicker nodes
+NODE_CLASS_MAPPINGS.update(LUMINANCE_DEFLICKER_NODES)
+
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ColorSpaceConverter": "Color Space Converter",
     "ColorGradingController": "Color Grading Controller",
@@ -1342,6 +1349,9 @@ NODE_DISPLAY_NAME_MAPPINGS.update(CINEMA_DELIVERY_DISPLAY_NAMES)
 
 # Add Animated Motion display names
 NODE_DISPLAY_NAME_MAPPINGS.update(ANIMATED_MOTION_DISPLAY_NAMES)
+
+# Add Luminance Deflicker display names
+NODE_DISPLAY_NAME_MAPPINGS.update(LUMINANCE_DEFLICKER_DISPLAY_NAMES)
 
 WEB_DIRECTORY = "./js"
 

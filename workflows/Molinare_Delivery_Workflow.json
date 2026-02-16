@@ -1,0 +1,155 @@
+{
+  "last_node_id": 8,
+  "last_link_id": 8,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadEXRSequence",
+      "pos": [100, 200],
+      "size": [300, 150],
+      "title": "1. Load Source EXR",
+      "inputs": [],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [1]}
+      ],
+      "properties": {
+        "folder_path": "/path/to/source/exr_sequence",
+        "start_frame": 0,
+        "frame_count": 120,
+        "skip_frames": 1
+      }
+    },
+    {
+      "id": 2,
+      "type": "LuminanceDeflicker",
+      "pos": [450, 200],
+      "size": [350, 200],
+      "title": "2. Deflicker (No Blur)",
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 1}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [2]}
+      ],
+      "properties": {
+        "method": "gain_only",
+        "smoothing_window": 7,
+        "strength": 1.0,
+        "reference_frame": "average",
+        "protect_highlights": true,
+        "max_correction": 1.5
+      }
+    },
+    {
+      "id": 3,
+      "type": "SaveEXRSequence",
+      "pos": [850, 100],
+      "size": [380, 280],
+      "title": "3. Save ACES EXR Sequence",
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 2}
+      ],
+      "outputs": [
+        {"name": "output_path", "type": "STRING", "links": [5]}
+      ],
+      "properties": {
+        "shot_name": "KSA_001_010",
+        "version": 1,
+        "start_frame": 1001,
+        "input_is_linear": true,
+        "convert_to_aces": true,
+        "bit_depth": "16",
+        "compression": "piz",
+        "output_dir": "/path/to/delivery/package"
+      }
+    },
+    {
+      "id": 4,
+      "type": "GenerateDeliveryCSV",
+      "pos": [1280, 100],
+      "size": [320, 200],
+      "title": "4. Generate CSV Manifest",
+      "inputs": [
+        {"name": "shot_folder", "type": "STRING", "link": 5}
+      ],
+      "outputs": [
+        {"name": "csv_path", "type": "STRING", "links": []}
+      ],
+      "properties": {
+        "shot_name": "KSA_001_010",
+        "version": 1,
+        "framerate": 24.0,
+        "resolution": "4096x2160",
+        "color_space": "ACES 2065-1"
+      }
+    },
+    {
+      "id": 5,
+      "type": "ACESToRec709Preview",
+      "pos": [850, 420],
+      "size": [300, 150],
+      "title": "5. Convert to Rec.709 Preview",
+      "inputs": [
+        {"name": "image", "type": "IMAGE", "link": 2}
+      ],
+      "outputs": [
+        {"name": "preview_image", "type": "IMAGE", "links": [6]}
+      ],
+      "properties": {
+        "exposure": 0.0,
+        "gamma": 2.4
+      }
+    },
+    {
+      "id": 6,
+      "type": "VHS_VideoCombine",
+      "pos": [1200, 420],
+      "size": [350, 300],
+      "title": "6. Reference QuickTime",
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 6}
+      ],
+      "outputs": [],
+      "properties": {
+        "frame_rate": 24,
+        "filename_prefix": "KSA_001_010_V001_ref",
+        "format": "video/h265-mp4",
+        "crf": 18,
+        "pix_fmt": "yuv420p10le"
+      }
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "IMAGE"],
+    [2, 2, 0, 3, 0, "IMAGE"],
+    [5, 3, 0, 4, 0, "STRING"],
+    [6, 5, 0, 6, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "Molinare Delivery Pipeline",
+      "bounding": [80, 50, 1500, 700],
+      "color": "#3f789e"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "description": "Molinare-Compliant Delivery Workflow",
+    "spec_version": "1.1",
+    "requirements": {
+      "EXR": "DCI 4K 4096x2160, ACES 2065-1, 16-bit half-float, PIZ compression",
+      "QT": "HD OAR, Rec.1886 2.4 Gamma / Rec.709, H.265/ProRes",
+      "Naming": "shot_name_version/shot_name_version.####.exr",
+      "Package": "yyyymmdd_KSA_vendorID_###"
+    },
+    "notes": [
+      "1. Load your source EXR sequence",
+      "2. LuminanceDeflicker corrects brightness variations without blur",
+      "3. SaveEXRSequence outputs ACES 2065-1, 16-bit, PIZ compressed",
+      "4. GenerateDeliveryCSV creates the required manifest",
+      "5. ACESToRec709Preview converts for reference QT",
+      "6. VHS_VideoCombine creates the reference movie"
+    ]
+  },
+  "version": 0.4
+}
