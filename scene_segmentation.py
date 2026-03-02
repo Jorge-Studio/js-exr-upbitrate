@@ -402,12 +402,324 @@ class LayerDecomposer:
         return (*layer_tensors, stack_info)
 
 
+class SegmentationPreview:
+    """
+    Visualize all segmented layers in a single preview image.
+    Each layer is color-coded with its label overlaid.
+    """
+
+    CATEGORY = "image/segmentation"
+    FUNCTION = "preview"
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("preview",)
+
+    LAYER_COLORS = [
+        (66, 133, 244),   # blue - sky
+        (52, 168, 83),    # green - foliage
+        (183, 129, 56),   # brown - ground
+        (234, 67, 53),    # red - person
+        (154, 103, 215),  # purple - building
+        (251, 188, 4),    # yellow - misc
+    ]
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "mask_1": ("MASK",),
+                "mask_2": ("MASK",),
+                "layer_info": ("STRING", {"forceInput": True}),
+                "overlay_opacity": ("FLOAT", {
+                    "default": 0.45, "min": 0.1, "max": 0.9, "step": 0.05,
+                    "tooltip": "How strongly the color overlay is shown."
+                }),
+                "show_labels": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+                "mask_3": ("MASK",),
+                "mask_4": ("MASK",),
+                "mask_5": ("MASK",),
+                "mask_6": ("MASK",),
+            },
+        }
+
+    def preview(self, image, mask_1, mask_2, layer_info, overlay_opacity,
+                show_labels, mask_3=None, mask_4=None, mask_5=None, mask_6=None):
+        from PIL import Image as PILImage, ImageDraw, ImageFont
+
+        img_np = image.cpu().float().numpy()
+        if len(img_np.shape) == 4:
+            frame = img_np[0]
+        else:
+            frame = img_np
+        h, w, c = frame.shape
+
+        all_masks = [mask_1, mask_2]
+        for m in [mask_3, mask_4, mask_5, mask_6]:
+            if m is not None:
+                all_masks.append(m)
+
+        try:
+            info_list = json.loads(layer_info)
+        except (json.JSONDecodeError, TypeError):
+            info_list = [{"label": f"layer_{i}"} for i in range(len(all_masks))]
+
+        # Build color overlay
+        overlay = np.zeros((h, w, 3), dtype=np.float64)
+        total_mask = np.zeros((h, w), dtype=np.float64)
+
+        for i, mask_t in enumerate(all_masks):
+            m = mask_t.cpu().float().numpy() if isinstance(mask_t, torch.Tensor) else np.array(mask_t)
+            if len(m.shape) == 3:
+                m = m[0] if m.shape[0] == 1 else m.mean(axis=-1)
+            if m.shape != (h, w):
+                from scipy.ndimage import zoom
+                m = zoom(m, (h / m.shape[0], w / m.shape[1]), order=1)
+            m = np.clip(m, 0, 1)
+
+            if m.sum() < 1:
+                continue
+
+            color = self.LAYER_COLORS[i % len(self.LAYER_COLORS)]
+            for ch_idx in range(3):
+                overlay[:, :, ch_idx] += m * (color[ch_idx] / 255.0)
+            total_mask += m
+
+        total_mask = np.clip(total_mask, 0, 1)
+
+        # Blend: original * (1 - alpha * mask) + overlay * alpha
+        result = frame.copy().astype(np.float64)
+        for ch_idx in range(3):
+            result[:, :, ch_idx] = (
+                frame[:, :, ch_idx] * (1 - overlay_opacity * total_mask) +
+                overlay[:, :, ch_idx] * overlay_opacity
+            )
+        result = np.clip(result, 0, 1)
+
+        # Draw labels using PIL
+        if show_labels:
+            pil_img = PILImage.fromarray((result * 255).astype(np.uint8))
+            draw = ImageDraw.Draw(pil_img)
+
+            try:
+                font_paths = [
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "/System/Library/Fonts/Helvetica.ttc",
+                    "C:/Windows/Fonts/arial.ttf",
+                ]
+                font = None
+                for fp in font_paths:
+                    try:
+                        font = ImageFont.truetype(fp, max(16, h // 30))
+                        break
+                    except (OSError, IOError):
+                        continue
+                if font is None:
+                    font = ImageFont.load_default()
+            except Exception:
+                font = ImageFont.load_default()
+
+            for i, mask_t in enumerate(all_masks):
+                m = mask_t.cpu().float().numpy() if isinstance(mask_t, torch.Tensor) else np.array(mask_t)
+                if len(m.shape) == 3:
+                    m = m[0] if m.shape[0] == 1 else m.mean(axis=-1)
+                if m.shape != (h, w):
+                    from scipy.ndimage import zoom
+                    m = zoom(m, (h / m.shape[0], w / m.shape[1]), order=1)
+
+                if m.sum() < 10:
+                    continue
+
+                # Find centroid of mask
+                ys, xs = np.where(m > 0.5)
+                if len(ys) == 0:
+                    continue
+                cy, cx = int(ys.mean()), int(xs.mean())
+
+                label = info_list[i]["label"] if i < len(info_list) else f"layer_{i}"
+                area_pct = info_list[i].get("area_pct", 0) if i < len(info_list) else 0
+                lfd = info_list[i].get("avg_fractal_dim", 0) if i < len(info_list) else 0
+
+                text = f"{label}"
+                if area_pct > 0:
+                    text += f" ({area_pct:.0f}%)"
+                if lfd > 0:
+                    text += f" LFD:{lfd:.1f}"
+
+                color = self.LAYER_COLORS[i % len(self.LAYER_COLORS)]
+
+                # Draw text with background
+                bbox = draw.textbbox((cx, cy), text, font=font)
+                padding = 4
+                draw.rectangle(
+                    [bbox[0] - padding, bbox[1] - padding,
+                     bbox[2] + padding, bbox[3] + padding],
+                    fill=(0, 0, 0, 180)
+                )
+                draw.text((cx, cy), text, fill=color, font=font)
+
+            result = np.array(pil_img).astype(np.float32) / 255.0
+
+        output = result[np.newaxis, ...].astype(np.float32)
+        print(f"[SegmentationPreview] Rendered {sum(1 for m in all_masks if (m.cpu().float().numpy() if isinstance(m, torch.Tensor) else np.array(m)).sum() > 10)} layers")
+        return (torch.from_numpy(output),)
+
+
+class LayerInpaintPrepare:
+    """
+    Prepare a segmented layer for text-to-image inpainting through
+    ComfyUI's KSampler. Outputs the masked region as an image with
+    proper conditioning setup for inpainting or detail enhancement.
+    """
+
+    CATEGORY = "image/segmentation"
+    FUNCTION = "prepare"
+    RETURN_TYPES = ("IMAGE", "MASK", "STRING")
+    RETURN_NAMES = ("inpaint_image", "inpaint_mask", "suggested_prompt")
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "layer_mask": ("MASK",),
+                "layer_label": ("STRING", {
+                    "default": "sky",
+                    "tooltip": "Semantic label for this layer."
+                }),
+                "expand_mask_px": ("INT", {
+                    "default": 10, "min": 0, "max": 50, "step": 2,
+                    "tooltip": "Expand mask edges for better blending."
+                }),
+                "detail_prompt_style": (["photorealistic", "cinematic", "natural", "custom"], {
+                    "default": "cinematic",
+                }),
+            },
+            "optional": {
+                "custom_prompt": ("STRING", {
+                    "default": "",
+                    "multiline": True,
+                }),
+            },
+        }
+
+    PROMPT_TEMPLATES = {
+        "sky": {
+            "photorealistic": "detailed blue sky with subtle cloud wisps, photorealistic, 8k",
+            "cinematic": "cinematic sky, atmospheric perspective, film grain, anamorphic",
+            "natural": "natural sky gradient, soft light",
+        },
+        "cloud": {
+            "photorealistic": "detailed cumulus clouds, volumetric lighting, 8k",
+            "cinematic": "dramatic cloud formations, golden hour light, cinematic",
+            "natural": "soft natural clouds",
+        },
+        "trees": {
+            "photorealistic": "detailed tree foliage, individual leaves visible, photorealistic 8k",
+            "cinematic": "cinematic forest canopy, depth of field, atmospheric haze",
+            "natural": "natural tree detail, organic textures",
+        },
+        "foliage": {
+            "photorealistic": "lush vegetation detail, leaf textures, photorealistic",
+            "cinematic": "cinematic vegetation, volumetric light through leaves",
+            "natural": "natural plant detail, organic",
+        },
+        "ground": {
+            "photorealistic": "detailed ground texture, dirt and pebbles, 8k macro",
+            "cinematic": "cinematic ground plane, shallow depth of field",
+            "natural": "natural ground detail, earth textures",
+        },
+        "person": {
+            "photorealistic": "detailed human features, skin texture, fabric detail, 8k",
+            "cinematic": "cinematic portrait lighting, film emulation, anamorphic bokeh",
+            "natural": "natural skin tones, fabric texture",
+        },
+        "building": {
+            "photorealistic": "architectural detail, surface textures, brick and mortar, 8k",
+            "cinematic": "cinematic architecture, dramatic lighting, production design",
+            "natural": "natural building textures, weathered surfaces",
+        },
+        "water": {
+            "photorealistic": "detailed water surface, caustics, reflections, 8k",
+            "cinematic": "cinematic water, light play on surface, anamorphic",
+            "natural": "natural water ripples, soft reflections",
+        },
+        "skin": {
+            "photorealistic": "detailed skin texture, pores visible, subsurface scattering, 8k",
+            "cinematic": "cinematic skin tones, beauty lighting, film emulation",
+            "natural": "natural skin detail, soft focus",
+        },
+        "face": {
+            "photorealistic": "detailed facial features, skin pores, catch light in eyes, 8k",
+            "cinematic": "cinematic close-up, dramatic lighting, shallow DOF",
+            "natural": "natural face detail, soft light",
+        },
+    }
+
+    def _get_prompt(self, label, style, custom_prompt):
+        if style == "custom" and custom_prompt:
+            return custom_prompt
+
+        label_lower = label.lower().strip()
+
+        # Direct match
+        if label_lower in self.PROMPT_TEMPLATES:
+            templates = self.PROMPT_TEMPLATES[label_lower]
+            return templates.get(style, templates.get("cinematic", f"detailed {label}, high quality"))
+
+        # Keyword match
+        for key, templates in self.PROMPT_TEMPLATES.items():
+            if key in label_lower or label_lower in key:
+                return templates.get(style, templates.get("cinematic", f"detailed {label}"))
+
+        return f"detailed {label}, high quality, {style}"
+
+    def prepare(self, image, layer_mask, layer_label, expand_mask_px,
+                detail_prompt_style, custom_prompt=""):
+
+        img_np = image.cpu().float().numpy()
+        if len(img_np.shape) == 3:
+            img_np = img_np[np.newaxis, ...]
+
+        mask_np = layer_mask.cpu().float().numpy()
+        if len(mask_np.shape) == 3:
+            mask_np = mask_np[0] if mask_np.shape[0] == 1 else mask_np.mean(axis=-1)
+
+        h, w = img_np.shape[1], img_np.shape[2]
+        if mask_np.shape != (h, w):
+            from scipy.ndimage import zoom
+            mask_np = zoom(mask_np, (h / mask_np.shape[0], w / mask_np.shape[1]), order=1)
+
+        # Expand mask for better blending
+        if expand_mask_px > 0:
+            from scipy.ndimage import binary_dilation
+            struct = np.ones((expand_mask_px * 2 + 1, expand_mask_px * 2 + 1))
+            expanded = binary_dilation(mask_np > 0.5, structure=struct).astype(np.float32)
+            # Smooth the expansion
+            expanded = gaussian_filter(expanded, sigma=expand_mask_px * 0.3)
+            mask_np = np.clip(expanded, 0, 1)
+
+        prompt = self._get_prompt(layer_label, detail_prompt_style, custom_prompt)
+
+        mask_tensor = torch.from_numpy(mask_np[np.newaxis, ...])
+
+        print(f"[LayerInpaintPrepare] '{layer_label}' -> {detail_prompt_style} prompt, "
+              f"mask expanded by {expand_mask_px}px")
+
+        return (image, mask_tensor, prompt)
+
+
 SCENE_SEGMENTATION_NODES = {
     "SceneSegmenter": SceneSegmenter,
     "LayerDecomposer": LayerDecomposer,
+    "SegmentationPreview": SegmentationPreview,
+    "LayerInpaintPrepare": LayerInpaintPrepare,
 }
 
 SCENE_SEGMENTATION_DISPLAY_NAMES = {
     "SceneSegmenter": "Scene Segmenter (AI)",
     "LayerDecomposer": "Layer Decomposer",
+    "SegmentationPreview": "Segmentation Preview",
+    "LayerInpaintPrepare": "Layer Inpaint Prepare",
 }
