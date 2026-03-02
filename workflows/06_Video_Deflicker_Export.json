@@ -5,7 +5,7 @@
       "folder_path": "/workspace/exr_sequence",
       "start_frame": 1001,
       "frame_count": 120,
-      "skip_frames": 0
+      "skip_frames": 1
     }
   },
   "2": {
@@ -44,9 +44,9 @@
       "frame_rate": 24,
       "loop_count": 0,
       "filename_prefix": "deflickered_LogC3",
-      "format": "video/h265-crf",
-      "crf": 18,
-      "save_metadata": true
+      "format": "video/h265-mp4",
+      "pingpong": false,
+      "save_output": true
     }
   },
   "6": {
@@ -64,9 +64,9 @@
       "frame_rate": 24,
       "loop_count": 0,
       "filename_prefix": "deflickered_Rec709_preview",
-      "format": "video/h265-crf",
-      "crf": 20,
-      "save_metadata": true
+      "format": "video/h265-mp4",
+      "pingpong": false,
+      "save_output": true
     }
   }
 }

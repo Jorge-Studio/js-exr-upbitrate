@@ -41,7 +41,7 @@
       "image": ["3", 0],
       "filename_prefix": "fractal_expanded",
       "bit_depth": "32",
-      "compression": "PIZ",
+      "compression": "piz",
       "output_format": "Linear",
       "input_is_linear": true
     }

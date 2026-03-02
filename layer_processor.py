@@ -454,6 +454,9 @@ class BatchLayerFractalProcessor:
         else:
             ref_frame = ref_img_np
 
+        if len(image_list) == 1 and len(mask_list) > 1:
+            image_list = image_list * len(mask_list)
+
         results = []
         num_layers = min(len(image_list), len(mask_list))
 

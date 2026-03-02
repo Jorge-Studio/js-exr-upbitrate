@@ -149,7 +149,7 @@
       "image": ["58", 0],
       "filename_prefix": "ultimate_pipeline",
       "bit_depth": "32",
-      "compression": "PIZ",
+      "compression": "piz",
       "output_format": "Linear",
       "input_is_linear": true
     }
@@ -159,7 +159,7 @@
     "class_type": "Rec709Converter",
     "inputs": {
       "image": ["58", 0],
-      "source_colorspace": "Linear",
+      "source_colorspace": "Linear sRGB",
       "target_colorspace": "Rec.709",
       "chromatic_adaptation": "Bradford"
     }

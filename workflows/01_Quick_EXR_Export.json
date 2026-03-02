@@ -20,7 +20,7 @@
       "image": ["2", 0],
       "filename_prefix": "quick_export",
       "bit_depth": "32",
-      "compression": "PIZ",
+      "compression": "piz",
       "output_format": "Linear",
       "input_is_linear": true
     }

@@ -194,7 +194,7 @@
       "image": ["60", 0],
       "filename_prefix": "per_layer_edited",
       "bit_depth": "32",
-      "compression": "PIZ",
+      "compression": "piz",
       "output_format": "Linear",
       "input_is_linear": true
     }

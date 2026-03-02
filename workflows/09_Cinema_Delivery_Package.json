@@ -5,7 +5,7 @@
       "folder_path": "/workspace/exr_sequence",
       "start_frame": 1001,
       "frame_count": 120,
-      "skip_frames": 0
+      "skip_frames": 1
     }
   },
   "2": {
@@ -38,12 +38,12 @@
     "inputs": {
       "images": ["3", 0],
       "shot_name": "KSA_TEST",
-      "version": "V001",
+      "version": 1,
       "start_frame": 1001,
       "input_is_linear": true,
       "convert_to_aces": true,
       "bit_depth": "16",
-      "compression": "PIZ"
+      "compression": "piz"
     }
   },
   "5": {
@@ -51,10 +51,10 @@
     "inputs": {
       "shot_folder": ["4", 0],
       "shot_name": "KSA_TEST",
-      "version": "V001",
-      "framerate": "24",
+      "version": 1,
+      "framerate": 24.0,
       "resolution": "4096x2160",
-      "color_space": "ACES2065-1"
+      "color_space": "ACES 2065-1"
     }
   },
   "6": {
@@ -72,9 +72,9 @@
       "frame_rate": 24,
       "loop_count": 0,
       "filename_prefix": "KSA_TEST_V001_ref",
-      "format": "video/h265-crf",
-      "crf": 18,
-      "save_metadata": true
+      "format": "video/h265-mp4",
+      "pingpong": false,
+      "save_output": true
     }
   }
 }

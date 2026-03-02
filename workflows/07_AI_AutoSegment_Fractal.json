@@ -67,7 +67,7 @@
       "image": ["6", 0],
       "filename_prefix": "ai_segmented_fractal",
       "bit_depth": "32",
-      "compression": "PIZ",
+      "compression": "piz",
       "output_format": "Linear",
       "input_is_linear": true
     }

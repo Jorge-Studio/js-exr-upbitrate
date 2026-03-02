@@ -24,6 +24,7 @@ from .fractal_utils import compute_local_fractal_dimension
 # ---------------------------------------------------------------------------
 _HAS_SAM3 = False
 _sam3_model_cache = {}
+_sam3_pipeline_cache = {}
 
 try:
     from transformers import Sam2Processor, Sam2Model, pipeline as hf_pipeline
@@ -271,10 +272,14 @@ class SceneSegmenter:
             if hf_pipeline is not None:
                 device_id = 0 if torch.cuda.is_available() else -1
                 ppb = max(8, int(32 * detail_level))
-                generator = hf_pipeline(
-                    "mask-generation", model=model_id,
-                    device=device_id, points_per_batch=ppb,
-                )
+
+                if model_id not in _sam3_pipeline_cache:
+                    print(f"[SAM2] Creating mask-generation pipeline for {model_id}...")
+                    _sam3_pipeline_cache[model_id] = hf_pipeline(
+                        "mask-generation", model=model_id,
+                        device=device_id, points_per_batch=ppb,
+                    )
+                generator = _sam3_pipeline_cache[model_id]
                 result = generator(pil_image, points_per_batch=ppb)
 
                 raw_masks = result.get("masks", [])
@@ -350,7 +355,9 @@ class SceneSegmenter:
                         continue
 
         except Exception as e:
-            print(f"[SceneSegmenter] SAM 2 auto-mask error: {e}")
+            import traceback
+            print(f"[SceneSegmenter] SAM 2 auto-mask error: {type(e).__name__}: {e}")
+            traceback.print_exc()
             return self._fallback_segmentation(
                 frame, prompts, min_area_pct, detail_level, auto_describe
             )

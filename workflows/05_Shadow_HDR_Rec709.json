@@ -34,7 +34,7 @@
     "class_type": "Rec709Converter",
     "inputs": {
       "image": ["3", 0],
-      "source_colorspace": "Linear",
+      "source_colorspace": "Linear sRGB",
       "target_colorspace": "Rec.709",
       "chromatic_adaptation": "Bradford"
     }
@@ -50,7 +50,7 @@
       "image": ["3", 0],
       "filename_prefix": "shadow_hdr",
       "bit_depth": "32",
-      "compression": "PIZ",
+      "compression": "piz",
       "output_format": "Linear",
       "input_is_linear": true
     }
