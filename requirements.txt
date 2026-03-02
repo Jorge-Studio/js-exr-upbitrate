@@ -17,6 +17,12 @@ numpy>=1.24.0
 # Color science (optional but recommended for ACES/Rec.709 transforms)
 colour-science>=0.4.3
 
-# AI Segmentation (optional - fallback mode works without these)
-# segment-anything-2
-# groundingdino
+# AI Segmentation - SAM 3 (primary, Tier 1 & used by Tiers 2-3)
+transformers>=4.40.0
+
+# DINO-X cloud API (optional, Tier 2 -- requires API key)
+# pip install dds-cloudapi-sdk
+# Get API key at https://cloud.deepdataspace.com
+
+# Legacy Grounding DINO 1.0 (optional, Tier 3 -- fully offline)
+# pip install groundingdino

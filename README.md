@@ -1,8 +1,8 @@
-# High Bit Depth EXR Export & Cinema Delivery for ComfyUI (v4.0)
+# High Bit Depth EXR Export & Cinema Delivery for ComfyUI (v4.1)
 
-Professional-grade EXR export with **Fractal Bit-Depth Expansion**, **AI Scene Segmentation**, **Log format support**, **color grading controls**, **cinema delivery compliance**, **motion animation**, **luminance-preserving deflicker**, and **maximum tonal precision** for VFX, film, compositing, and color grading workflows.
+Professional-grade EXR export with **SAM 3 Tiered AI Segmentation**, **Fractal Bit-Depth Expansion**, **Per-Layer Editing**, **Log format support**, **color grading controls**, **cinema delivery compliance**, **motion animation**, **luminance-preserving deflicker**, and **maximum tonal precision** for VFX, film, compositing, and color grading workflows.
 
-**v4.0: Fractal Bit-Depth Expansion + AI Scene Segmentation + Layer-Based Detail Enhancement**
+**v4.1: SAM 3 Tiered Segmentation + Auto-Describe + Dynamic Layers + Per-Layer Edit**
 
 ---
 
@@ -13,82 +13,113 @@ Professional-grade EXR export with **Fractal Bit-Depth Expansion**, **AI Scene S
 3. Connect your image and run!
 
 **Recommended workflows:**
+- `SAM3_Tiered_AutoSegment.json` - **NEW** One-click auto-segmentation + batch fractal processing
+- `SAM3_PerLayer_Edit.json` - **NEW** Per-layer controls with LayerDetailEditor
+- `Fractal_BitDepth_Full.json` - Updated full pipeline using SAM 3 tiered backend
 - `Fractal_BitDepth_NoAI.json` - Fractal-only 8-to-32-bit expansion (no AI models needed)
-- `Fractal_BitDepth_Full.json` - Full pipeline with AI segmentation + per-layer processing
 - `Segmentation_Preview_Inpaint.json` - Segmentation preview + text-to-image inpainting setup
 - `ultimate_exr_workflow.json` - Complete HDR processing pipeline
-- `Test6_Cinema_HDR_Max.json` - Maximum quality cinema delivery
-- `Video_ProRes4444_LogC3.json` - Video export in ProRes 4444
 
 ---
 
-## What's New in v4.0
+## What's New in v4.1
 
-### Fractal Bit-Depth Expansion (NEW!)
+### SAM 3 Tiered Segmentation System (NEW!)
+
+Replaced the SAM v1 + GroundingDINO backend with a 4-tier system:
+
+| Tier | Backend | Quality | Requires | Use Case |
+|------|---------|---------|----------|----------|
+| **1: sam3** | SAM 3 standalone (HuggingFace) | Excellent -- native text prompts, 2x better than SAM2 | `transformers>=4.40.0`, GPU, ~2.5GB | Default for most users |
+| **2: dinox_sam3** | DINO-X cloud + SAM 3 local masks | Best possible -- 59.8 AP LVIS detection | DINO-X API key, internet | Maximum detection accuracy |
+| **3: gdino_sam3** | Grounding DINO 1.0 + SAM 3 masks | Very good -- proven local detector | `groundingdino` package | Fully offline, legacy |
+| **4: fallback** | Luminance/edge thresholds | Basic | No AI, CPU only | Environments without GPU |
+
+**Auto selection**: Set `detection_backend` to `"auto"` and the node will use the best available tier.
+
+### Auto-Describe Mode (NEW!)
+
+Enable `auto_describe` on SceneSegmenter to automatically detect and label scene elements without manual text prompts. Uses spatial heuristics (y-position, color, area) and AI confidence scores. Outputs editable `layer_info` JSON with auto-detected labels, confidence scores, fractal presets, and detail prompts.
+
+### Dynamic Layer Count (NEW!)
+
+Removed the fixed 6-mask output cap. SceneSegmenter now outputs a dynamic-length MASK list (via `OUTPUT_IS_LIST`). Downstream nodes accept lists via `INPUT_IS_LIST`. The number of layers adapts to the scene automatically.
+
+### New Nodes
+
+| Node | Description |
+|------|-------------|
+| **Layer Selector** | Extract a single mask from the dynamic list by index |
+| **Layer Detail Editor** | Override labels, scale fractal/smooth strength, skip layers |
+| **Batch Layer Fractal Processor** | One-click processing of ALL layers at once |
+
+### Updated Nodes
+
+| Node | Change |
+|------|--------|
+| **Scene Segmenter** | Tiered backend, auto-describe, dynamic mask list output |
+| **Layer Decomposer** | Accepts mask lists via `INPUT_IS_LIST` |
+| **Segmentation Preview** | Accepts mask lists, 20 color palette, confidence display |
+| **Layer Assembler** | Accepts layer+mask lists, no more fixed 6-pair limit |
+
+---
+
+## DINO-X API Setup (Tier 2)
+
+For maximum detection accuracy, set up DINO-X cloud:
+
+1. Get a free API key at https://cloud.deepdataspace.com
+2. Install the SDK: `pip install dds-cloudapi-sdk`
+3. In the SceneSegmenter node, set `detection_backend` to `"dinox_sam3"` and paste your key in `dinox_api_key`
+
+DINO-X achieves 59.8 AP on LVIS -- the best open-set detection available. It handles the detection, then SAM 3 runs locally for pixel-precise masks.
+
+---
+
+## What's in v4.0
+
+### Fractal Bit-Depth Expansion
 
 Expand 8-bit source material to genuine 32-bit float using fractal mathematics:
 
-- **Fractal Bit-Depth Expander**: Uses Local Fractal Dimension (LFD) analysis, fractal Brownian motion (fBm), Hermite spline interpolation, and rational fractal cubic splines to fill the tonal space between 8-bit quantization steps with perceptually correct data.
-- **Perceptual Dither**: Apply blue noise, TPDF, or fractal dither patterns for banding-free gradients.
+- **Fractal Bit-Depth Expander**: Uses Local Fractal Dimension (LFD) analysis, fractal Brownian motion (fBm), Hermite spline interpolation, and rational fractal cubic splines.
+- **Perceptual Dither**: Blue noise, TPDF, or fractal dither patterns for banding-free gradients.
 
-### AI Scene Segmentation (NEW!)
-
-Decompose images into semantic regions for per-layer processing:
-
-- **Scene Segmenter (AI)**: Uses SAM2 + GroundingDINO for text-guided segmentation or luminance/edge fallback when AI models are unavailable. Generates depth maps via Depth Anything V2.
-- **Layer Decomposer**: Extracts individual layers with alpha masks and per-layer statistics (area, luminance, fractal dimension).
-- **Segmentation Preview**: Color-coded visualization of all segments with labels, area percentages, and LFD values overlaid.
-- **Layer Inpaint Prepare**: Sets up each segment for text-to-image inpainting through ComfyUI's KSampler. Built-in prompt templates for sky, foliage, ground, building, person, water, skin, etc. across photorealistic/cinematic/natural styles.
-
-### Layer Processing Pipeline (NEW!)
-
-- **Layer Fractal Processor**: Applies fractal bit-depth expansion per-layer with auto-tuned parameters based on semantic labels (sky, foliage, skin, etc. each get optimized settings).
-- **Layer Detail Enhancer**: Frequency-domain blending via Laplacian pyramid to inject AI-generated or synthetic micro-detail while preserving original color grading.
-- **Layer Assembler**: Composites processed layers back with alpha feathering and optional ACES 2065-1 conversion.
-- **Bit-Depth Validator**: QC node reporting unique values, PSNR, SSIM, gradient smoothness, and waveform visualization.
-
-### Shadow-Controlled HDR (NEW!)
+### Shadow-Controlled HDR
 
 - **Shadow Controlled Exposure**: Power-curve shadow control with noise suppression.
-- **Shadow Curve Processor**: Non-linear curves that peak instead of roll off for tonal precision.
-- **Rec.709 Converter**: Accurate Rec.709 conversion using the `colour-science` library.
+- **Shadow Curve Processor**: Non-linear curves that peak instead of roll off.
+- **Rec.709 Converter**: Accurate Rec.709 conversion using `colour-science`.
 
-### Exposure Bracketing (NEW!)
+### Exposure Bracketing
 
-- **Exposure Bracket Generator**: Generate multiple EV levels from a single source for HDR merging.
-- **Exposure Bracket to TIFF**: Save 16-bit TIFF brackets for archival.
-- **Video to Exposure Brackets**: Process video into bracket sequences for HDR pipelines.
+- **Exposure Bracket Generator**: Generate multiple EV levels from a single source.
+- **Exposure Bracket to TIFF**: Save 16-bit TIFF brackets.
+- **Video to Exposure Brackets**: Process video into bracket sequences.
 
 ---
 
 ## What's in v3.x
 
 ### Luminance-Preserving Deflicker
-- **Luminance Deflicker**: Fix frame-to-frame brightness flicker **without blur**
-  - Uses per-frame gain correction instead of pixel averaging
-  - Methods: `gain_only`, `gain_and_offset`, `histogram_match`
-- **Normals Deflicker**: Stabilize gradients/surface detail while preserving luminance
+- **Luminance Deflicker**: Fix brightness flicker **without blur** (gain_only, histogram_match)
+- **Normals Deflicker**: Stabilize gradients while preserving luminance
 
-### Cinema Delivery Nodes (Molinare Compliant)
-- **Save EXR Sequence**: Export video frames as numbered EXR sequence with ACES 2065-1
-- **Generate Delivery CSV**: Create professional manifest files
-- **ACES to Rec.709 Preview**: View-transform for monitoring HDR content
+### Cinema Delivery (Molinare Compliant)
+- **Save EXR Sequence**: ACES 2065-1, DCI 4K, numbered sequence
+- **Generate Delivery CSV**: Professional manifest files
+- **ACES to Rec.709 Preview**: View-transform for monitoring
 
 ### Animation & Motion Control
-- **Animated Pan & Scan**: Keyframe-based pan, zoom, and rotation animation
+- **Animated Pan & Scan**: Keyframe-based pan, zoom, rotation
 - **Load EXR Image / Sequence**: Load HDR EXR files
-- **Extract Motion from Video**: Optical flow-based motion path extraction
-- **Apply Motion Path**: Apply extracted or manual motion to sequences
+- **Extract / Apply Motion Path**: Optical flow motion extraction
 
 ### Core Color & EXR
-- **Log Format Export**: ARRI LogC3, Sony S-Log3, Panasonic V-Log, Canon Log 3, RED Log3G10, DaVinci Intermediate
-- **Color Space Converter**: Convert between sRGB, Linear, and Log formats
-- **Color Grading Controller**: Professional lift/gamma/gain, exposure, contrast, saturation
-- **HDR Curve Editor**: Lightroom-style shadows/midtones/highlights controls
-- **Color Match to Reference**: Auto-match processed image to original
-- **Advanced Color Match**: 5 professional color calibration algorithms
-- **Auto Exposure Match**: Quick brightness matching with exposure stop readout
-- **Image Stats**: Verify range, unique values, and effective bit depth
+- **Log Format Export**: ARRI LogC3, Sony S-Log3, V-Log, Canon Log 3, RED Log3G10, DaVinci Intermediate
+- **Color Space Converter**, **Color Grading Controller**, **HDR Curve Editor**
+- **Color Match to Reference**, **Advanced Color Match** (5 algorithms), **Auto Exposure Match**
+- **Image Stats**: Verify range, unique values, effective bit depth
 
 ---
 
@@ -115,21 +146,22 @@ pip install -r requirements.txt
 | imageio | Recommended | EXR fallback + video handling |
 | opencv-python | Recommended | Debanding, rotation, optical flow, TIFF |
 | colour-science | Recommended | Accurate Rec.709/ACES color transforms |
+| **transformers** | **Recommended** | **SAM 3 model (Tier 1 segmentation)** |
 | torch | **Yes** | Tensor operations (bundled with ComfyUI) |
 
-#### Optional AI Models (for Scene Segmenter)
+#### Optional AI Backends
 
-| Model | Purpose | Auto-download |
-|-------|---------|---------------|
-| SAM2 (segment-anything-2) | Semantic segmentation | Manual install |
-| GroundingDINO | Text-guided object detection | Manual install |
-| Depth Anything V2 | Monocular depth estimation | Manual install |
+| Backend | Package | Purpose |
+|---------|---------|---------|
+| SAM 3 (Tier 1) | `transformers>=4.40.0` | Primary segmentation (auto-downloads ~2.5GB model) |
+| DINO-X (Tier 2) | `dds-cloudapi-sdk` | Cloud detection API -- best accuracy, needs API key |
+| Grounding DINO (Tier 3) | `groundingdino` | Legacy local detector -- fully offline |
 
-The Scene Segmenter falls back to luminance/edge-based segmentation if AI models are not installed.
+The Scene Segmenter falls back to luminance/edge-based segmentation (Tier 4) if no AI models are installed.
 
 ---
 
-## All Nodes (35 Total)
+## All Nodes (38 Total)
 
 ### Core Color & EXR Nodes (10)
 
@@ -150,204 +182,195 @@ The Scene Segmenter falls back to luminance/edge-based segmentation if AI models
 
 | Node | Description |
 |------|-------------|
-| **Fractal Bit-Depth Expander** | 8-to-32-bit expansion via LFD, fBm, Hermite splines, and RFC interpolation |
-| **Perceptual Dither** | Blue noise, TPDF, or fractal dither for banding-free output |
+| **Fractal Bit-Depth Expander** | 8-to-32-bit expansion via LFD, fBm, Hermite splines |
+| **Perceptual Dither** | Blue noise, TPDF, or fractal dither |
 
-### AI Scene Segmentation Nodes (4)
-
-| Node | Description |
-|------|-------------|
-| **Scene Segmenter (AI)** | Text-guided semantic segmentation with SAM2/GroundingDINO or luminance fallback |
-| **Layer Decomposer** | Extract layers with alpha masks, per-layer stats (area, luminance, LFD) |
-| **Segmentation Preview** | Color-coded overlay visualization of all segments with labels |
-| **Layer Inpaint Prepare** | Prepare per-segment image + mask + prompt for KSampler inpainting |
-
-### Layer Processing Nodes (4)
+### AI Scene Segmentation Nodes (5)
 
 | Node | Description |
 |------|-------------|
-| **Layer Fractal Processor** | Per-layer fractal expansion with semantic-aware auto-tuning |
-| **Layer Detail Enhancer** | Laplacian pyramid frequency blending for micro-detail injection |
-| **Layer Assembler** | Composite layers with alpha feathering + optional ACES conversion |
+| **Scene Segmenter (SAM3 Tiered)** | 4-tier backend, auto-describe, dynamic mask list output |
+| **Layer Selector** | **NEW** Extract single mask from dynamic list by index |
+| **Layer Decomposer** | Extract layers with alpha masks, per-layer stats |
+| **Segmentation Preview** | Color-coded overlay with labels, confidence, LFD |
+| **Layer Inpaint Prepare** | Per-segment image + mask + prompt for KSampler |
+
+### Layer Processing Nodes (5)
+
+| Node | Description |
+|------|-------------|
+| **Layer Fractal Processor** | Per-layer fractal expansion with semantic auto-tuning |
+| **Layer Detail Editor** | **NEW** Override labels, strength multipliers, skip layers |
+| **Batch Layer Fractal Processor** | **NEW** One-click all-layers processing |
+| **Layer Detail Enhancer** | Laplacian pyramid frequency blending |
+| **Layer Assembler** | Composite layers with alpha feathering + ACES conversion |
+
+### Validation (1)
+
+| Node | Description |
+|------|-------------|
 | **Bit-Depth Validator** | QC: unique values, PSNR, SSIM, gradient smoothness, waveform |
 
 ### Shadow-Controlled HDR Nodes (3)
 
 | Node | Description |
 |------|-------------|
-| **Shadow Controlled Exposure** | Power-curve shadow control with noise suppression |
-| **Shadow Curve Processor** | Non-linear curves that peak instead of rolling off |
-| **Rec.709 Converter** | Accurate Rec.709 via `colour-science` library |
+| **Shadow Controlled Exposure** | Power-curve shadow control |
+| **Shadow Curve Processor** | Non-linear peaking curves |
+| **Rec.709 Converter** | Accurate Rec.709 via colour-science |
 
 ### Exposure Bracketing Nodes (3)
 
 | Node | Description |
 |------|-------------|
-| **Exposure Bracket Generator** | Generate multiple EV brackets from single source |
-| **Exposure Bracket to TIFF** | Save 16-bit TIFF exposure brackets |
-| **Video to Exposure Brackets** | Process video into bracket sequences |
+| **Exposure Bracket Generator** | Multiple EV brackets from single source |
+| **Exposure Bracket to TIFF** | Save 16-bit TIFF brackets |
+| **Video to Exposure Brackets** | Video bracket sequences |
 
 ### Cinema Delivery Nodes (3)
 
 | Node | Description |
 |------|-------------|
-| **Save EXR Sequence (Cinema)** | DCI 4K ACES 2065-1 EXR sequence for post-house delivery |
-| **Generate Delivery CSV** | Professional manifest with shot info, frame ranges, specs |
-| **ACES to Rec.709 Preview** | RRT+ODT view transform for preview monitoring |
+| **Save EXR Sequence (Cinema)** | DCI 4K ACES 2065-1 EXR delivery |
+| **Generate Delivery CSV** | Professional manifest |
+| **ACES to Rec.709 Preview** | RRT+ODT view transform |
 
 ### Animation & Motion Nodes (5)
 
 | Node | Description |
 |------|-------------|
-| **Animated Pan & Scan** | Keyframe animation for pan, zoom, rotation with easing |
+| **Animated Pan & Scan** | Keyframe animation with easing |
 | **Load EXR Image** | Load single HDR EXR files |
-| **Load EXR Sequence** | Load EXR sequence as video batch |
-| **Extract Motion from Video** | Optical flow motion path extraction |
-| **Apply Motion Path** | Apply motion to image/video sequences |
+| **Load EXR Sequence** | Load EXR sequence as video |
+| **Extract Motion from Video** | Optical flow motion extraction |
+| **Apply Motion Path** | Apply motion to sequences |
 
 ### Deflicker Nodes (2)
 
 | Node | Description |
 |------|-------------|
-| **Luminance Deflicker** | Per-frame gain correction for brightness flicker (NO BLUR) |
-| **Normals Deflicker** | Gradient-preserving temporal smoothing (preserves luminance) |
+| **Luminance Deflicker** | Per-frame gain correction (NO BLUR) |
+| **Normals Deflicker** | Gradient-preserving temporal smoothing |
 
 ---
 
-## Fractal Bit-Depth Expansion
+## Pipeline Examples
 
-### How It Works
-
-The core innovation is using fractal mathematics to fill the 24 empty bit-levels between 8-bit (256 values) and 32-bit float (16M+ values):
-
-1. **Local Fractal Dimension (LFD)**: Analyzes image complexity at every pixel using box-counting. High LFD (edges, texture) gets fractal noise; low LFD (sky, gradients) gets smooth Hermite interpolation.
-
-2. **Fractal Brownian Motion (fBm)**: Generates micro-texture that looks natural at all scales, injected into detailed regions at the sub-pixel level.
-
-3. **Hermite Spline Interpolation**: Smoothly fills tonal steps in flat regions (sky, skin) without introducing artifacts.
-
-4. **Rational Fractal Cubic (RFC) Spline**: Blends cubic interpolation with fractal perturbation for medium-complexity areas.
-
-5. **Blue Noise / TPDF Dither**: Perceptually optimized noise patterns break remaining banding.
-
-### Fractal-Only Pipeline (No AI Needed)
-
-```
-[8-bit Source Image/Video]
-    |
-Fractal Bit-Depth Expander
-    |-- fractal_strength: 0.3 (how much fractal detail)
-    |-- smooth_strength: 0.7 (how smooth flat regions)
-    |-- lfd_window: 9 (analysis window size)
-    |
-Perceptual Dither
-    |-- method: blue_noise
-    |-- strength: 0.3
-    |
-[32-bit Float Output]
-    |
-Save Image EXR (32-bit, LogC3)
-```
-
-### Full Pipeline with AI Segmentation
-
-```
-[8-bit Source Image]
-    |
-Scene Segmenter (AI)
-    |-- labels: "sky, trees, ground, building, person"
-    |-- method: sam2_grounding_dino (or luminance_edge fallback)
-    |
-    +--> Segmentation Preview (visualize all layers)
-    |
-    +--> Layer Decomposer (extract layers)
-           |
-           +--> Layer Fractal Processor (sky -- smooth, low fractal)
-           +--> Layer Fractal Processor (trees -- high fractal, texture)
-           +--> Layer Fractal Processor (ground -- medium fractal)
-           +--> Layer Detail Enhancer (per-layer sharpening)
-           |
-           +--> Layer Assembler (composite all layers)
-                  |
-                  Bit-Depth Validator (QC report)
-                  |
-                  Save Image EXR (32-bit ACES)
-```
-
-### Segmentation Preview & Inpaint Pipeline
+### One-Click Auto-Segmentation Pipeline
 
 ```
 [Source Image]
     |
-Scene Segmenter (AI)
-    |-- labels: "sky, trees, ground, person"
+Scene Segmenter (auto_describe=true, backend=auto)
     |
-    +--> Segmentation Preview
-    |      |-- overlay_opacity: 0.45
-    |      |-- show_labels: true
-    |      +--> PreviewImage (color-coded layer map)
+    +--> Segmentation Preview --> PreviewImage
     |
-    +--> Layer Inpaint Prepare (sky)
-    |      |-- layer_label: "sky"
-    |      |-- detail_prompt_style: cinematic
-    |      |-- expand_mask_px: 10
-    |      +--> inpaint_image --> SetLatentNoiseMask --> KSampler
-    |      +--> suggested_prompt --> CLIP Text Encode
-    |
-    +--> Layer Inpaint Prepare (ground)
-           |-- layer_label: "ground"
-           +--> [same KSampler chain]
+    +--> BatchLayerFractalProcessor (processes ALL layers at once)
+            |
+            LayerAssembler (composite back)
+                |
+                SaveImageEXR (32-bit, ACES)
 ```
 
-### Layer Inpaint Prepare -- Built-in Prompt Templates
+### Per-Layer Edit Pipeline
 
-| Layer Label | Cinematic Prompt |
-|-------------|-----------------|
-| sky | cinematic sky, atmospheric perspective, film grain, anamorphic |
-| cloud | dramatic cloud formations, golden hour light, cinematic |
-| trees / foliage | cinematic vegetation, volumetric light through leaves |
-| ground | cinematic ground plane, shallow depth of field |
-| person | cinematic portrait lighting, film emulation, anamorphic bokeh |
-| building | cinematic architecture, dramatic lighting, production design |
-| water | cinematic water, light play on surface, anamorphic |
-| skin / face | cinematic skin tones, beauty lighting, film emulation |
-
-Also available in `photorealistic` and `natural` styles, or use `custom` with your own prompt.
+```
+[Source Image]
+    |
+Scene Segmenter (text_prompts: "sky, trees, ground")
+    |
+    +--> LayerSelector (index=0) --> LayerDetailEditor (sky: low fractal)
+    |                                    |
+    |                                    LayerFractalProcessor
+    |
+    +--> LayerSelector (index=1) --> LayerDetailEditor (trees: high fractal)
+    |                                    |
+    |                                    LayerFractalProcessor
+    |
+    +--> LayerSelector (index=2) --> LayerDetailEditor (ground: medium)
+                                         |
+                                         LayerFractalProcessor
+    |
+    LayerAssembler --> BitDepthValidator --> SaveImageEXR
+```
 
 ### Semantic-Aware Auto-Tuning (Layer Fractal Processor)
 
-The Layer Fractal Processor automatically adjusts parameters based on what the layer contains:
+| Layer Type | Fractal Octaves | Persistence | Smoothness | Strategy |
+|-----------|----------------|-------------|------------|----------|
+| Sky | 2 | 0.30 | 0.95 | Ultra-smooth gradient fill |
+| Cloud | 3 | 0.45 | 0.75 | Soft organic edges |
+| Skin / Face | 3 | 0.35-0.40 | 0.70-0.75 | Subsurface-aware, no artifacts |
+| Foliage / Trees | 6 | 0.60 | 0.30 | Rich organic micro-texture |
+| Ground | 5 | 0.50 | 0.40 | Medium earth texture |
+| Building | 3 | 0.35 | 0.60 | Sharp edges, smooth surfaces |
+| Water | 4 | 0.45 | 0.80 | Smooth with ripple texture |
+| Hair | 6 | 0.55 | 0.25 | Strand-level detail |
 
-| Layer Type | Fractal Strength | Smooth Strength | Strategy |
-|-----------|-----------------|-----------------|----------|
-| Sky | Low (0.15) | High (0.85) | Smooth gradients, minimal noise |
-| Foliage | High (0.55) | Low (0.35) | Rich micro-texture |
-| Skin / Face | Very Low (0.10) | Very High (0.90) | Ultra-smooth, no artifacts |
-| Ground | Medium (0.35) | Medium (0.55) | Balanced detail |
-| Building | Medium-High (0.40) | Medium (0.50) | Structural detail |
-| Water | Low-Medium (0.25) | High (0.70) | Smooth with caustic texture |
+---
 
-### Quality Metrics (Bit-Depth Validator)
+## Node Settings Reference
 
-| Metric | 8-bit Input | After Fractal Expansion | Target |
-|--------|------------|------------------------|--------|
-| Unique Values | ~220 | 50,000+ | >30,000 |
-| PSNR vs Original | -- | >40 dB | >35 dB |
-| SSIM vs Original | -- | >0.98 | >0.95 |
-| Gradient Smoothness | Low | High | High |
+### Scene Segmenter (SAM3 Tiered)
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| text_prompts | "sky, trees, ground, person, building" | Comma-separated labels (ignored when auto_describe=true) |
+| detection_backend | "auto" | auto / sam3 / dinox_sam3 / gdino_sam3 / fallback |
+| model_size | "large" | SAM 3 model size: large, base_plus, tiny |
+| auto_describe | false | Auto-detect scene contents |
+| detail_level | 0.5 | Mask detail / confidence threshold (0-1) |
+| min_area_percent | 1.0 | Minimum segment area as % of image |
+| dinox_api_key | "" | Optional DINO-X API key for Tier 2 |
+
+### Layer Selector
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| index | 0 | Which mask to extract from the list (0-based) |
+
+### Layer Detail Editor
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| override_label | "" | Replace auto-detected label (blank = keep) |
+| fractal_strength_mult | 1.0 | Multiplier for fractal parameters (0-3) |
+| smooth_strength_mult | 1.0 | Multiplier for smoothness (0-3) |
+| detail_prompt_override | "" | Custom inpainting prompt (blank = auto) |
+| skip_layer | false | Zero out mask so downstream ignores this layer |
+
+### Batch Layer Fractal Processor
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| seed | 42 | Random seed for fractal noise |
+| global_fractal_mult | 1.0 | Scale fractal strength across ALL layers |
+| global_smooth_mult | 1.0 | Scale smoothness across ALL layers |
+
+### Layer Assembler
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| feather_radius | 3 | Mask feathering for seamless compositing |
+| output_colorspace | passthrough | Convert output: passthrough, sRGB, Rec.709, Linear, ACEScg, ACES2065-1 |
+| background_color | 0.0 | Fill color for uncovered areas |
+
+### Segmentation Preview
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| overlay_opacity | 0.45 | Color overlay strength (0.1-0.9) |
+| show_labels | true | Draw labels with area%, confidence, LFD |
 
 ---
 
 ## Molinare/Professional DI Delivery
 
-This package is designed to meet professional post-production delivery specifications:
-
 ### Supported Specifications
-- **Resolution**: DCI 4K (4096x2160), UHD 4K (3840x2160), 2K, 1080p
-- **Color Space**: ACES 2065-1 (AP0), ACEScct, Linear Rec.709
+- **Resolution**: DCI 4K (4096x2160), UHD 4K, 2K, 1080p
+- **Color Space**: ACES 2065-1, ACEScct, Linear Rec.709
 - **Bit Depth**: 16-bit half-float or 32-bit full float
 - **Compression**: PIZ (recommended), ZIP, ZIPS, RLE, None
-- **Frame Rate**: 24fps (or any custom)
 - **Naming**: `shot_name_V###.####.exr`
 
 ### Cinema Delivery Workflow
@@ -355,337 +378,58 @@ This package is designed to meet professional post-production delivery specifica
 ```
 [Video/Image Source]
     |
-Prepare Image High Bit Depth (sRGB -> Linear + headroom)
+Prepare Image High Bit Depth
     |
-Color Grading Controller (creative adjustments)
-    |
-Color Space Converter (Linear -> keep or convert)
+Color Grading Controller
     |
 Save EXR Sequence (Cinema)
     |-- shot_name: "KSA_001_010"
     |-- convert_to_aces: true
-    |-- bit_depth: 16
-    |-- compression: piz
+    |-- bit_depth: 16 / compression: piz
     |
-Generate Delivery CSV (metadata manifest)
-    |
-ACES to Rec.709 Preview (for QC viewing)
-```
-
-### Example Manifest Output
-
-```csv
-Field,Value
-Shot Name,KSA_001_010_V001
-Resolution,4096x2160
-Color Space,ACES 2065-1
-Framerate,24 fps
-Frame Range,1001-1120
-Total Frames,120
-Duration,5.00 seconds
-Format,OpenEXR 16-bit half-float
-Compression,PIZ
-Delivery Date,2026-01-26 14:30
-Generated By,NodyJS/ComfyUI Cinema Delivery
+Generate Delivery CSV
 ```
 
 ---
 
-## Animation & Motion Control
+## Included Workflows (27)
 
-### Manual Keyframe Animation
-
-Use **Animated Pan & Scan** for cinematic camera movements:
-
-```
-[Large Source Image or Video]
-    |
-Animated Pan & Scan
-    |-- output_size: 4K DCI
-    |-- start_x: -500, start_y: 0, start_zoom: 1.0
-    |-- end_x: 500, end_y: 0, end_zoom: 1.2
-    |-- easing: ease_in_out
-    |-- rotation_start: 0, rotation_end: 5
-    |
-[Animated Output]
-```
-
-### Motion Extraction from Reference Video
-
-```
-[Reference Video with Camera Movement]
-    |
-Extract Motion from Video
-    |-- sensitivity: 1.0
-    |-- smoothing: 5
-    |
-[motion_path output]
-
-[Target Image/Video]
-    |
-Apply Motion Path <-- [motion_path]
-    |-- scale_motion: 1.0
-    |-- invert_motion: false (true = stabilization)
-    |
-[Output with Matching Motion]
-```
-
-### Easing Functions
-
-| Easing | Description |
-|--------|-------------|
-| `linear` | Constant speed |
-| `ease_in` | Start slow, accelerate |
-| `ease_out` | Start fast, decelerate |
-| `ease_in_out` | Smooth acceleration and deceleration |
-
----
-
-## Deflicker Guide
-
-### The Problem
-
-AI-generated video often has frame-to-frame brightness or texture flicker that traditional temporal averaging cannot fix without causing blur.
-
-### The Solution
-
-Our deflicker nodes work **on measurements, not pixels**:
-
-| Method | How It Works | Best For |
-|--------|--------------|----------|
-| **Luminance Deflicker (gain_only)** | Measures frame brightness, smooths the curve, applies gain correction | Brightness pumping, exposure flicker |
-| **Luminance Deflicker (histogram_match)** | Matches each frame's histogram to a reference | Color/tonal inconsistency |
-| **Normals Deflicker** | Smooths image gradients while preserving luminance | Texture flicker, grain dancing |
-
-### Why No Blur?
-
-Traditional deflicker averages pixel colors across frames -- **blur**.
-
-Our approach:
-1. **Measure** what's varying (brightness level, gradient stability)
-2. **Smooth** the measurement, not the pixels
-3. **Apply** a correction factor per frame
-
-Result: Every pixel keeps its original relationship to neighbors = **zero blur**.
-
-### Deflicker Workflow
-
-```
-[EXR Sequence with Flicker]
-    |
-Load EXR Sequence
-    |
-Luminance Deflicker
-    |-- method: gain_only
-    |-- smoothing_window: 7
-    |-- strength: 1.0
-    |
-[Optional: Normals Deflicker for texture]
-    |
-Color Space Converter (Linear -> LogC3)
-    |
-VHS_VideoCombine (H.265/ProRes output)
-```
-
----
-
-## Log Format Guide
-
-| Format | Use Case |
-|--------|----------|
-| **ARRI LogC3** | Industry standard, best for general use and Resolve |
-| **Sony S-Log3** | Match Sony camera footage |
-| **Panasonic V-Log** | Match Panasonic camera footage |
-| **Canon Log 3** | Match Canon camera footage |
-| **RED Log3G10** | Match RED camera footage |
-| **DaVinci Intermediate** | Native DaVinci Resolve working space |
-| **Linear** | VFX compositing in Nuke, After Effects |
-
----
-
-## Included Workflows (25)
+### SAM3 Segmentation Workflows (NEW!)
+| Workflow | Description |
+|----------|-------------|
+| `SAM3_Tiered_AutoSegment.json` | One-click auto-segment + batch fractal processing |
+| `SAM3_PerLayer_Edit.json` | Per-layer editing with LayerDetailEditor |
 
 ### Fractal & Segmentation Workflows
 | Workflow | Description |
 |----------|-------------|
-| `Fractal_BitDepth_NoAI.json` | Fractal-only 8-to-32-bit expansion pipeline |
-| `Fractal_BitDepth_Full.json` | Full pipeline: AI segmentation + per-layer fractal processing |
-| `Segmentation_Preview_Inpaint.json` | Segmentation preview + text-to-image inpaint setup |
+| `Fractal_BitDepth_Full.json` | Updated full pipeline using SAM 3 tiered backend |
+| `Fractal_BitDepth_NoAI.json` | Fractal-only 8-to-32-bit expansion |
+| `Segmentation_Preview_Inpaint.json` | Preview + text-to-image inpaint setup |
 
 ### Bit-Depth & HDR Workflows
 | Workflow | Description |
 |----------|-------------|
-| `BitDepth_From_Single_Source.json` | Exposure bracketing + HDR merge from single source |
-| `Anti_Flicker_HDR_Pipeline.json` | Anti-flicker HDR processing chain |
+| `BitDepth_From_Single_Source.json` | Exposure bracketing + HDR merge |
+| `Anti_Flicker_HDR_Pipeline.json` | Anti-flicker HDR processing |
 
 ### Core Workflows
 | Workflow | Description |
 |----------|-------------|
-| `ultimate_exr_workflow.json` | Complete HDR pipeline with all nodes |
-| `advanced_color_match_workflow.json` | Compare all 5 color matching algorithms |
+| `ultimate_exr_workflow.json` | Complete HDR pipeline |
+| `advanced_color_match_workflow.json` | Compare all 5 color match algorithms |
 
-### Cinema Delivery Workflows
+### Cinema Delivery
 | Workflow | Description |
 |----------|-------------|
-| `Test1_HDR_Full_Pipeline.json` | HDR processing with debanding and grading |
-| `Test2_ACES_Delivery.json` | Direct ACES 2065-1 EXR export |
-| `Test3_Specular_Expand.json` | HDR highlight expansion |
-| `Test4_ColorGrade_LogC3.json` | Professional color grading to ARRI LogC3 |
-| `Test5_Rec709_Preview.json` | Rec.709 preview generation |
-| `Test6_Cinema_HDR_Max.json` | Maximum quality cinema output |
+| `Test1-6, Molinare, Video_*` | Cinema delivery, video export, and test workflows |
 
-### Video Export Workflows
-| Workflow | Description |
-|----------|-------------|
-| `Video_ProRes4444_LogC3.json` | ProRes 4444 video export in LogC3 |
-| `Video_H265_Rec709_Preview.json` | H.265 preview video for QC |
-
-### Deflicker Workflows
+### Deflicker
 | Workflow | Description |
 |----------|-------------|
 | `Luminance_Deflicker_NoBlur.json` | Brightness correction without blur |
 | `Normals_Deflicker_GradPreserve.json` | Gradient-based flicker reduction |
 | `Quick_Deflicker_Video.json` | Quick video deflicker pipeline |
-
-### Molinare Delivery Workflow
-| Workflow | Description |
-|----------|-------------|
-| `Molinare_Delivery_Workflow.json` | Complete spec-compliant delivery pipeline |
-
-### Testing & Utility Workflows
-| Workflow | Description |
-|----------|-------------|
-| `test_deband_effect.json` | Test debanding effect |
-| `test_good_exr.json` | Test EXR output quality |
-| `test_high_bit_image.json` | High bit-depth image test |
-| `test_minimal_exr.json` | Minimal EXR export test |
-| `test_replicate_good.json` | Replicate known-good output |
-
----
-
-## Node Settings Reference
-
-### Fractal Bit-Depth Expander
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| fractal_strength | 0.3 | Amount of fractal micro-texture to inject (0-1) |
-| smooth_strength | 0.7 | Hermite spline smoothness for flat regions (0-1) |
-| lfd_window | 9 | Local Fractal Dimension analysis window (5-21) |
-| temporal_coherence | true | Maintain consistency across video frames |
-
-### Scene Segmenter (AI)
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| labels | "sky, trees, ground, building, person, other" | Comma-separated semantic labels |
-| method | luminance_edge | Segmentation method (sam2_grounding_dino or luminance_edge) |
-| confidence | 0.5 | Detection confidence threshold (AI only) |
-| num_layers | 6 | Maximum number of output layers |
-| use_depth | false | Generate depth map for layer ordering |
-
-### Segmentation Preview
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| overlay_opacity | 0.45 | Color overlay strength (0.1-0.9) |
-| show_labels | true | Draw labels at mask centroids |
-
-### Layer Inpaint Prepare
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| layer_label | "sky" | Semantic label for prompt template lookup |
-| expand_mask_px | 10 | Dilate mask edges for smoother blending |
-| detail_prompt_style | cinematic | Prompt style: photorealistic, cinematic, natural, custom |
-| custom_prompt | "" | Override prompt (used when style is "custom") |
-
-### Save EXR Sequence (Cinema)
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| shot_name | KSA_001_010 | Shot identifier without version |
-| version | 1 | Version number (becomes V001, V002, etc.) |
-| start_frame | 1001 | Industry-standard start frame |
-| input_is_linear | true | Input is scene-linear |
-| convert_to_aces | true | Convert to ACES 2065-1 |
-| bit_depth | 16 | Half-float for Molinare spec |
-| compression | piz | PIZ recommended for delivery |
-
-### Animated Pan & Scan
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| output_size | 4K DCI | Output resolution preset |
-| start_x/y | 0 | Starting pan position |
-| start_zoom | 1.0 | Starting zoom (1.0 = 100%) |
-| end_x/y | 0 | Ending pan position |
-| end_zoom | 1.0 | Ending zoom level |
-| easing | ease_in_out | Animation curve type |
-| rotation_start/end | 0.0 | Rotation in degrees |
-| loop_mode | none | Animation loop behavior |
-
-### Color Grading Controller
-
-| Setting | Range | Description |
-|---------|-------|-------------|
-| exposure | -5 to +5 | Exposure in stops |
-| contrast | 0.5 to 2.0 | Contrast around 18% grey |
-| lift | -0.5 to 0.5 | Shadow offset |
-| gamma | 0.5 to 2.0 | Midtone gamma |
-| gain | 0.5 to 2.0 | Highlight multiplier |
-| saturation | 0 to 2.0 | Color saturation |
-
-### Advanced Color Match
-
-| Algorithm | Best For |
-|-----------|----------|
-| **Histogram Matching** | General-purpose, fast |
-| **LAB Color Space** | Better perceptual color accuracy |
-| **Reinhard Transfer** | Classic color transfer |
-| **CLAHE + Histogram** | Local contrast + global color |
-| **CDF Matching** | Precise statistical matching |
-
----
-
-## Importing into Professional Software
-
-### DaVinci Resolve
-1. Import EXR -> Set Input Color Space to match (e.g., ACES 2065-1)
-2. Timeline Color Space: DaVinci Wide Gamut / ACEScct
-3. Apply creative grade
-4. Output: Your delivery format
-
-### Nuke
-1. Read node -> Set colorspace to ACES 2065-1 or Linear
-2. Work in scene-linear
-3. Use OCIOColorSpace for view transforms
-
-### After Effects
-1. Import EXR sequence
-2. Interpret Footage -> Color Management -> Input Profile: ACES
-3. Apply OCIO or manual LUT for viewing
-
-### Baselight
-1. Import EXR sequence
-2. Set Input Colour Space: ACES 2065-1
-3. Working Space: ACEScct (as per Molinare spec)
-
----
-
-## Quality Verification
-
-Use the **Bit-Depth Validator** or **Image Stats** node to verify output quality:
-
-```
-[Your Processed Image] --> Bit-Depth Validator
-```
-
-Expected output for fractal-expanded HDR:
-- Unique values: 50,000+ (genuine high bit-depth)
-- PSNR vs original: >40 dB (faithful to source)
-- SSIM: >0.98 (structurally identical)
-- Gradient smoothness: High (no banding)
 
 ---
 
@@ -693,11 +437,13 @@ Expected output for fractal-expanded HDR:
 
 ```
 js-exr-upbitrate/
-  __init__.py                 # Core nodes + registration
+  __init__.py                 # Core nodes + registration (38 nodes)
   fractal_utils.py            # Fractal math library (LFD, fBm, Hermite, blue noise)
   fractal_bitdepth.py         # FractalBitDepthExpander, PerceptualDither
-  scene_segmentation.py       # SceneSegmenter, LayerDecomposer, SegmentationPreview, LayerInpaintPrepare
-  layer_processor.py          # LayerFractalProcessor
+  scene_segmentation.py       # SceneSegmenter (SAM3 tiered), LayerSelector,
+                              # LayerDecomposer, SegmentationPreview, LayerInpaintPrepare
+  layer_processor.py          # LayerFractalProcessor, LayerDetailEditor,
+                              # BatchLayerFractalProcessor
   ai_detail_layer.py          # LayerDetailEnhancer
   layer_assembly.py           # LayerAssembler, BitDepthValidator
   cinema_delivery.py          # SaveEXRSequence, GenerateDeliveryCSV, ACESToRec709Preview
@@ -706,7 +452,7 @@ js-exr-upbitrate/
   exposure_bracketing.py      # ExposureBracketGenerator, ExposureBracketToTIFF, VideoToExposureBrackets
   shadow_controlled_hdr.py    # ShadowControlledExposure, ShadowCurveProcessor, Rec709Converter
   requirements.txt            # Python dependencies
-  workflows/                  # 25 ready-to-use workflow JSONs
+  workflows/                  # 27 ready-to-use workflow JSONs
   js/                         # ComfyUI web extensions
 ```
 
@@ -714,25 +460,30 @@ js-exr-upbitrate/
 
 ## Troubleshooting
 
+### Scene Segmenter shows "fallback" only
+AI models not installed. Install `transformers>=4.40.0` for SAM 3 (Tier 1).
+
+### DINO-X returns errors
+- Verify your API key at https://cloud.deepdataspace.com
+- Check internet connection -- DINO-X is a cloud API
+- The node will automatically fall back to SAM 3 standalone
+
+### SAM 3 model download is slow
+First run downloads ~2.5GB from HuggingFace. For RunPod, download to the network volume for persistence:
+```bash
+pip install -U transformers
+python -c "from transformers import Sam3Model; Sam3Model.from_pretrained('facebook/sam3')"
+```
+
 ### "Cannot load EXR" error
 Install pyexr: `pip install pyexr`
-
-### Scene Segmenter shows "luminance_edge" only
-AI models (SAM2, GroundingDINO) not installed. The node still works using luminance/edge fallback.
-
-### Motion nodes not showing rotation
-Ensure opencv-python is installed: `pip install opencv-python`
-
-### EXR sequence not loading correctly
-- Use `start_frame: 0` to load all frames from beginning
-- Check that frame numbers are in filename (e.g., `shot.1001.exr`)
 
 ### Color looks wrong in Resolve
 - Verify Input Color Space matches export format
 - For ACES 2065-1 output, set Input to "ACES 2065-1 (AP0)"
 
 ### colour-science API errors
-Update to latest version: `pip install --upgrade colour-science`
+Update to latest: `pip install --upgrade colour-science`
 
 ---
 

@@ -25,51 +25,40 @@ class LayerAssembler:
     """
     Composite multiple layers back into a single image.
 
-    Supports back-to-front alpha compositing with feathered edges
-    and optional color space conversion to ACES2065-1 for delivery.
+    Accepts dynamic-length layer and mask lists (from OUTPUT_IS_LIST nodes)
+    or individual layer/mask pairs. Supports alpha compositing with
+    feathered edges and optional color space conversion.
     """
 
     CATEGORY = "image/bitdepth"
     FUNCTION = "assemble"
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("composite",)
+    INPUT_IS_LIST = True
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "layer_1": ("IMAGE",),
-                "mask_1": ("MASK",),
-                "layer_2": ("IMAGE",),
-                "mask_2": ("MASK",),
+                "layers": ("IMAGE",),
+                "masks": ("MASK",),
                 "feather_radius": ("INT", {
                     "default": 3, "min": 0, "max": 20, "step": 1,
-                    "tooltip": "Pixel radius for feathering mask edges to prevent halos."
+                    "tooltip": "Pixel radius for feathering mask edges."
                 }),
                 "output_colorspace": (["passthrough", "sRGB", "Rec.709", "Linear",
                                        "ACEScg", "ACES2065-1"], {
                     "default": "passthrough",
-                    "tooltip": "Convert final composite to this color space."
                 }),
             },
             "optional": {
-                "layer_3": ("IMAGE",),
-                "mask_3": ("MASK",),
-                "layer_4": ("IMAGE",),
-                "mask_4": ("MASK",),
-                "layer_5": ("IMAGE",),
-                "mask_5": ("MASK",),
-                "layer_6": ("IMAGE",),
-                "mask_6": ("MASK",),
                 "background_color": ("FLOAT", {
                     "default": 0.0, "min": 0.0, "max": 1.0, "step": 0.1,
-                    "tooltip": "Background fill color (gray level) for uncovered areas."
                 }),
             },
         }
 
     def _prepare_mask(self, mask, h, w, feather_radius):
-        """Convert mask tensor to numpy and feather edges."""
         if isinstance(mask, torch.Tensor):
             m = mask.cpu().float().numpy()
         else:
@@ -88,12 +77,10 @@ class LayerAssembler:
         return np.clip(m, 0, 1).astype(np.float32)
 
     def _convert_colorspace(self, image, target):
-        """Convert image to target color space."""
         if target == "passthrough":
             return image
 
         if target == "Linear":
-            # sRGB to linear
             return np.where(
                 image <= 0.04045,
                 image / 12.92,
@@ -101,13 +88,12 @@ class LayerAssembler:
             ).astype(np.float32)
 
         if not _HAS_COLOUR:
-            print(f"[LayerAssembler] colour-science not installed, skipping {target} conversion")
+            print(f"[LayerAssembler] colour-science not installed, skipping {target}")
             return image
 
         try:
             from colour.models import RGB_COLOURSPACES
 
-            # Decode sRGB to linear first
             linear = colour.cctf_decoding(np.clip(image, 0, 1), function='sRGB')
 
             if target in ("sRGB", "Rec.709"):
@@ -116,7 +102,6 @@ class LayerAssembler:
                 ).astype(np.float32)
 
             source_cs = RGB_COLOURSPACES['sRGB']
-
             if target == "ACEScg":
                 target_cs = RGB_COLOURSPACES['ACEScg']
             elif target == "ACES2065-1":
@@ -143,47 +128,43 @@ class LayerAssembler:
             print(f"[LayerAssembler] Color conversion failed: {e}")
             return image
 
-    def assemble(self, layer_1, mask_1, layer_2, mask_2, feather_radius,
-                 output_colorspace, layer_3=None, mask_3=None,
-                 layer_4=None, mask_4=None, layer_5=None, mask_5=None,
-                 layer_6=None, mask_6=None, background_color=0.0):
+    def assemble(self, layers, masks, feather_radius, output_colorspace,
+                 background_color=None):
 
-        # Get first layer to determine dimensions
-        l1 = layer_1.cpu().float().numpy()
+        layer_list = layers if isinstance(layers, list) else [layers]
+        mask_list = masks if isinstance(masks, list) else [masks]
+        fr = feather_radius[0] if isinstance(feather_radius, list) else feather_radius
+        cs = output_colorspace[0] if isinstance(output_colorspace, list) else output_colorspace
+        bg = 0.0
+        if background_color is not None:
+            bg = background_color[0] if isinstance(background_color, list) else background_color
+
+        # Determine dimensions from first layer
+        l1 = layer_list[0].cpu().float().numpy()
         if len(l1.shape) == 4:
             l1 = l1[0]
         h, w, c = l1.shape
 
-        # Collect layer/mask pairs
-        pairs = [(layer_1, mask_1), (layer_2, mask_2)]
-        for l, m in [(layer_3, mask_3), (layer_4, mask_4),
-                     (layer_5, mask_5), (layer_6, mask_6)]:
-            if l is not None and m is not None:
-                pairs.append((l, m))
-
-        # Start with background
-        composite = np.full((h, w, c), background_color, dtype=np.float64)
+        composite = np.full((h, w, c), bg, dtype=np.float64)
 
         active_layers = 0
-        for layer_tensor, mask_tensor in pairs:
-            layer_np = layer_tensor.cpu().float().numpy()
+        num_pairs = min(len(layer_list), len(mask_list))
+        for i in range(num_pairs):
+            layer_np = layer_list[i].cpu().float().numpy()
             if len(layer_np.shape) == 4:
                 layer_np = layer_np[0]
 
-            # Resize layer if needed
             if layer_np.shape[:2] != (h, w):
                 from scipy.ndimage import zoom
                 scale = (h / layer_np.shape[0], w / layer_np.shape[1], 1)
                 layer_np = zoom(layer_np, scale, order=3)
 
-            mask = self._prepare_mask(mask_tensor, h, w, feather_radius)
+            mask = self._prepare_mask(mask_list[i], h, w, fr)
 
             if mask.sum() < 1:
                 continue
 
             active_layers += 1
-
-            # Alpha composite: result = layer * alpha + composite * (1 - alpha)
             for ch in range(c):
                 composite[:, :, ch] = (
                     layer_np[:, :, ch].astype(np.float64) * mask +
@@ -192,13 +173,11 @@ class LayerAssembler:
 
         composite = np.clip(composite, 0.0, 1.0).astype(np.float32)
 
-        # Color space conversion
-        if output_colorspace != "passthrough":
-            composite = self._convert_colorspace(composite, output_colorspace)
+        if cs != "passthrough":
+            composite = self._convert_colorspace(composite, cs)
 
         result = composite[np.newaxis, ...]
-        print(f"[LayerAssembler] Composited {active_layers} layers, "
-              f"output: {output_colorspace}, {h}x{w}")
+        print(f"[LayerAssembler] Composited {active_layers} layers, output: {cs}, {h}x{w}")
 
         return (torch.from_numpy(result),)
 
