@@ -10,6 +10,13 @@ imageio>=2.31.0
 opencv-python>=4.8.0
 pillow>=9.0.0
 
-# Scientific computing (for motion analysis)
+# Scientific computing (fractal analysis, frequency decomposition, motion analysis)
 scipy>=1.10.0
 numpy>=1.24.0
+
+# Color science (optional but recommended for ACES/Rec.709 transforms)
+colour-science>=0.4.3
+
+# AI Segmentation (optional - fallback mode works without these)
+# segment-anything-2
+# groundingdino

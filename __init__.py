@@ -1308,6 +1308,30 @@ from .exposure_bracketing import (
     EXPOSURE_BRACKETING_NODES,
     EXPOSURE_BRACKETING_DISPLAY_NAMES,
 )
+from .shadow_controlled_hdr import (
+    SHADOW_HDR_NODES,
+    SHADOW_HDR_DISPLAY_NAMES,
+)
+from .fractal_bitdepth import (
+    FRACTAL_BITDEPTH_NODES,
+    FRACTAL_BITDEPTH_DISPLAY_NAMES,
+)
+from .scene_segmentation import (
+    SCENE_SEGMENTATION_NODES,
+    SCENE_SEGMENTATION_DISPLAY_NAMES,
+)
+from .layer_processor import (
+    LAYER_PROCESSOR_NODES,
+    LAYER_PROCESSOR_DISPLAY_NAMES,
+)
+from .ai_detail_layer import (
+    AI_DETAIL_NODES,
+    AI_DETAIL_DISPLAY_NAMES,
+)
+from .layer_assembly import (
+    LAYER_ASSEMBLY_NODES,
+    LAYER_ASSEMBLY_DISPLAY_NAMES,
+)
 
 # =============================================================================
 # NODE MAPPINGS
@@ -1338,6 +1362,24 @@ NODE_CLASS_MAPPINGS.update(LUMINANCE_DEFLICKER_NODES)
 # Add Exposure Bracketing nodes
 NODE_CLASS_MAPPINGS.update(EXPOSURE_BRACKETING_NODES)
 
+# Add Shadow-Controlled HDR nodes
+NODE_CLASS_MAPPINGS.update(SHADOW_HDR_NODES)
+
+# Add Fractal Bit-Depth Expansion nodes
+NODE_CLASS_MAPPINGS.update(FRACTAL_BITDEPTH_NODES)
+
+# Add Scene Segmentation nodes
+NODE_CLASS_MAPPINGS.update(SCENE_SEGMENTATION_NODES)
+
+# Add Layer Processor nodes
+NODE_CLASS_MAPPINGS.update(LAYER_PROCESSOR_NODES)
+
+# Add AI Detail Enhancement nodes
+NODE_CLASS_MAPPINGS.update(AI_DETAIL_NODES)
+
+# Add Layer Assembly nodes
+NODE_CLASS_MAPPINGS.update(LAYER_ASSEMBLY_NODES)
+
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ColorSpaceConverter": "Color Space Converter",
     "ColorGradingController": "Color Grading Controller",
@@ -1362,6 +1404,24 @@ NODE_DISPLAY_NAME_MAPPINGS.update(LUMINANCE_DEFLICKER_DISPLAY_NAMES)
 
 # Add Exposure Bracketing display names
 NODE_DISPLAY_NAME_MAPPINGS.update(EXPOSURE_BRACKETING_DISPLAY_NAMES)
+
+# Add Shadow-Controlled HDR display names
+NODE_DISPLAY_NAME_MAPPINGS.update(SHADOW_HDR_DISPLAY_NAMES)
+
+# Add Fractal Bit-Depth display names
+NODE_DISPLAY_NAME_MAPPINGS.update(FRACTAL_BITDEPTH_DISPLAY_NAMES)
+
+# Add Scene Segmentation display names
+NODE_DISPLAY_NAME_MAPPINGS.update(SCENE_SEGMENTATION_DISPLAY_NAMES)
+
+# Add Layer Processor display names
+NODE_DISPLAY_NAME_MAPPINGS.update(LAYER_PROCESSOR_DISPLAY_NAMES)
+
+# Add AI Detail Enhancement display names
+NODE_DISPLAY_NAME_MAPPINGS.update(AI_DETAIL_DISPLAY_NAMES)
+
+# Add Layer Assembly display names
+NODE_DISPLAY_NAME_MAPPINGS.update(LAYER_ASSEMBLY_DISPLAY_NAMES)
 
 WEB_DIRECTORY = "./js"
 

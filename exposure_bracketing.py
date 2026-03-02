@@ -229,15 +229,30 @@ class ExposureBracketToTIFF:
                 frame = images_np[i]
                 
                 if bit_depth == "16":
-                    # 16-bit TIFF
+                    # 16-bit TIFF - use cv2 or tifffile for proper 16-bit support
                     frame_16 = (np.clip(frame, 0, 1) * 65535).astype(np.uint16)
-                    img = Image.fromarray(frame_16, mode='RGB')
+                    try:
+                        import cv2
+                        # OpenCV uses BGR, so convert
+                        bgr = cv2.cvtColor(frame_16, cv2.COLOR_RGB2BGR)
+                        cv2.imwrite(filepath, bgr)
+                    except ImportError:
+                        try:
+                            import tifffile
+                            tifffile.imwrite(filepath, frame_16)
+                        except ImportError:
+                            # Fallback: PIL with proper format
+                            # PIL needs (H, W, C) with I;16 mode per channel workaround
+                            # Split channels and save separately, or use 8-bit
+                            frame_8 = (np.clip(frame, 0, 1) * 255).astype(np.uint8)
+                            img = Image.fromarray(frame_8, mode='RGB')
+                            img.save(filepath, format='TIFF', compression='none')
+                            print(f"[WARNING] 16-bit TIFF needs cv2 or tifffile. Saved as 8-bit.")
                 else:
                     # 8-bit TIFF
                     frame_8 = (np.clip(frame, 0, 1) * 255).astype(np.uint8)
                     img = Image.fromarray(frame_8, mode='RGB')
-                
-                img.save(filepath, format='TIFF', compression='none')
+                    img.save(filepath, format='TIFF', compression='none')
             
             output_paths.append(folder_path)
             print(f"[ExposureBracketToTIFF] Saved {num_frames} frames to {folder_path}")
