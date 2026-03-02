@@ -1,0 +1,28 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "example.png"
+    }
+  },
+  "2": {
+    "class_type": "PrepareImageHighBitDepth",
+    "inputs": {
+      "image": ["1", 0],
+      "input_is_srgb": true,
+      "add_headroom": 0.1,
+      "deband_strength": 1.0
+    }
+  },
+  "3": {
+    "class_type": "SaveImageEXR",
+    "inputs": {
+      "image": ["2", 0],
+      "filename_prefix": "quick_export",
+      "bit_depth": "32",
+      "compression": "PIZ",
+      "output_format": "Linear",
+      "input_is_linear": true
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "example.png"
+    }
+  },
+  "2": {
+    "class_type": "PrepareImageHighBitDepth",
+    "inputs": {
+      "image": ["1", 0],
+      "input_is_srgb": true,
+      "add_headroom": 0.1,
+      "deband_strength": 0.5
+    }
+  },
+  "3": {
+    "class_type": "ColorGradingController",
+    "inputs": {
+      "image": ["2", 0],
+      "exposure": 0.0,
+      "contrast": 1.0,
+      "lift": 0.0,
+      "gamma": 1.0,
+      "gain": 1.0,
+      "saturation": 1.0,
+      "input_is_linear": true
+    }
+  },
+  "4": {
+    "class_type": "HDRCurveEditor",
+    "inputs": {
+      "image": ["3", 0],
+      "shadows": 0.0,
+      "midtones": 0.0,
+      "highlights": 0.0,
+      "whites": 0.0,
+      "blacks": 0.0
+    }
+  },
+  "5": {
+    "class_type": "ImageStats",
+    "inputs": {
+      "image": ["4", 0]
+    }
+  },
+  "6": {
+    "class_type": "SaveImageEXR",
+    "inputs": {
+      "image": ["4", 0],
+      "filename_prefix": "graded",
+      "bit_depth": "32",
+      "compression": "PIZ",
+      "output_format": "Linear",
+      "input_is_linear": true
+    }
+  },
+  "7": {
+    "class_type": "ColorSpaceConverter",
+    "inputs": {
+      "image": ["4", 0],
+      "input_space": "Linear",
+      "output_space": "sRGB"
+    }
+  },
+  "8": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": ["7", 0]
+    }
+  }
+}

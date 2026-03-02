@@ -1,0 +1,80 @@
+{
+  "1": {
+    "class_type": "LoadEXRSequence",
+    "inputs": {
+      "folder_path": "/workspace/exr_sequence",
+      "start_frame": 1001,
+      "frame_count": 120,
+      "skip_frames": 0
+    }
+  },
+  "2": {
+    "class_type": "LuminanceDeflicker",
+    "inputs": {
+      "images": ["1", 0],
+      "method": "gain_only",
+      "smoothing_window": 7,
+      "strength": 0.8,
+      "reference_frame": "average",
+      "protect_highlights": true,
+      "max_correction": 2.0
+    }
+  },
+  "3": {
+    "class_type": "ColorGradingController",
+    "inputs": {
+      "image": ["2", 0],
+      "exposure": 0.0,
+      "contrast": 1.0,
+      "lift": 0.0,
+      "gamma": 1.0,
+      "gain": 1.0,
+      "saturation": 1.0,
+      "input_is_linear": true
+    }
+  },
+  "4": {
+    "class_type": "SaveEXRSequence",
+    "inputs": {
+      "images": ["3", 0],
+      "shot_name": "KSA_TEST",
+      "version": "V001",
+      "start_frame": 1001,
+      "input_is_linear": true,
+      "convert_to_aces": true,
+      "bit_depth": "16",
+      "compression": "PIZ"
+    }
+  },
+  "5": {
+    "class_type": "GenerateDeliveryCSV",
+    "inputs": {
+      "shot_folder": ["4", 0],
+      "shot_name": "KSA_TEST",
+      "version": "V001",
+      "framerate": "24",
+      "resolution": "4096x2160",
+      "color_space": "ACES2065-1"
+    }
+  },
+  "6": {
+    "class_type": "ACESToRec709Preview",
+    "inputs": {
+      "image": ["3", 0],
+      "exposure": 0.0,
+      "gamma": 2.2
+    }
+  },
+  "7": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": {
+      "images": ["6", 0],
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "KSA_TEST_V001_ref",
+      "format": "video/h265-crf",
+      "crf": 18,
+      "save_metadata": true
+    }
+  }
+}

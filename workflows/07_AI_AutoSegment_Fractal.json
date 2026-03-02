@@ -1,0 +1,90 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "example.png"
+    }
+  },
+  "2": {
+    "class_type": "SceneSegmenter",
+    "inputs": {
+      "image": ["1", 0],
+      "text_prompts": "sky, trees, ground, person, building",
+      "detection_backend": "auto",
+      "model_size": "large",
+      "auto_describe": true,
+      "detail_level": 0.5,
+      "min_area_percent": 1.0
+    }
+  },
+  "3": {
+    "class_type": "SegmentationPreview",
+    "inputs": {
+      "image": ["1", 0],
+      "masks": ["2", 0],
+      "layer_info": ["2", 2],
+      "overlay_opacity": 0.5,
+      "show_labels": true
+    }
+  },
+  "4": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["3", 0] },
+    "_meta": { "title": "Segmentation Preview" }
+  },
+  "5": {
+    "class_type": "BatchLayerFractalProcessor",
+    "inputs": {
+      "images": ["1", 0],
+      "masks": ["2", 0],
+      "layer_info": ["2", 2],
+      "seed": 42,
+      "global_fractal_mult": 1.0,
+      "global_smooth_mult": 1.0
+    }
+  },
+  "6": {
+    "class_type": "LayerAssembler",
+    "inputs": {
+      "layers": ["5", 0],
+      "masks": ["2", 0],
+      "feather_radius": 3,
+      "output_colorspace": "passthrough",
+      "background_color": 0.0
+    }
+  },
+  "7": {
+    "class_type": "BitDepthValidator",
+    "inputs": {
+      "expanded_image": ["6", 0],
+      "original_image": ["1", 0],
+      "waveform_height": 256
+    }
+  },
+  "8": {
+    "class_type": "SaveImageEXR",
+    "inputs": {
+      "image": ["6", 0],
+      "filename_prefix": "ai_segmented_fractal",
+      "bit_depth": "32",
+      "compression": "PIZ",
+      "output_format": "Linear",
+      "input_is_linear": true
+    }
+  },
+  "9": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["6", 0] },
+    "_meta": { "title": "Final Composite" }
+  },
+  "10": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["7", 1] },
+    "_meta": { "title": "Waveform QC" }
+  },
+  "11": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["2", 1] },
+    "_meta": { "title": "Depth Map" }
+  }
+}

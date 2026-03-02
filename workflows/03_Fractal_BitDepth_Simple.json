@@ -1,0 +1,63 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "example.png"
+    }
+  },
+  "2": {
+    "class_type": "FractalBitDepthExpander",
+    "inputs": {
+      "image": ["1", 0],
+      "target_bit_depth": "32",
+      "fractal_octaves": 6,
+      "fractal_persistence": 0.5,
+      "gradient_smoothness": 0.7,
+      "temporal_coherence": 0.5,
+      "seed": 42
+    }
+  },
+  "3": {
+    "class_type": "PerceptualDither",
+    "inputs": {
+      "image": ["2", 0],
+      "method": "blue_noise",
+      "strength": 0.3,
+      "target_bits": "16",
+      "seed": 42
+    }
+  },
+  "4": {
+    "class_type": "BitDepthValidator",
+    "inputs": {
+      "expanded_image": ["3", 0],
+      "original_image": ["1", 0],
+      "waveform_height": 256
+    }
+  },
+  "5": {
+    "class_type": "SaveImageEXR",
+    "inputs": {
+      "image": ["3", 0],
+      "filename_prefix": "fractal_expanded",
+      "bit_depth": "32",
+      "compression": "PIZ",
+      "output_format": "Linear",
+      "input_is_linear": true
+    }
+  },
+  "6": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": ["2", 1]
+    },
+    "_meta": { "title": "Fractal Map Preview" }
+  },
+  "7": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": ["4", 1]
+    },
+    "_meta": { "title": "Waveform Preview" }
+  }
+}

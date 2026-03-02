@@ -1,0 +1,68 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "example.png"
+    }
+  },
+  "2": {
+    "class_type": "ShadowControlledExposure",
+    "inputs": {
+      "image": ["1", 0],
+      "exposure_step": 2.0,
+      "shadow_power": 2.5,
+      "shadow_threshold": 0.15,
+      "peak_clipping": true,
+      "denoise_shadows": true,
+      "input_colorspace": "sRGB",
+      "working_colorspace": "Linear",
+      "shadow_denoise_strength": 0.5
+    }
+  },
+  "3": {
+    "class_type": "ShadowCurveProcessor",
+    "inputs": {
+      "image": ["2", 2],
+      "shadow_power": 2.0,
+      "shadow_threshold": 0.2,
+      "blend_width": 0.1,
+      "preserve_color": true,
+      "input_colorspace": "Linear"
+    }
+  },
+  "4": {
+    "class_type": "Rec709Converter",
+    "inputs": {
+      "image": ["3", 0],
+      "source_colorspace": "Linear",
+      "target_colorspace": "Rec.709",
+      "chromatic_adaptation": "Bradford"
+    }
+  },
+  "5": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["4", 0] },
+    "_meta": { "title": "Rec.709 Preview" }
+  },
+  "6": {
+    "class_type": "SaveImageEXR",
+    "inputs": {
+      "image": ["3", 0],
+      "filename_prefix": "shadow_hdr",
+      "bit_depth": "32",
+      "compression": "PIZ",
+      "output_format": "Linear",
+      "input_is_linear": true
+    }
+  },
+  "7": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["2", 0] },
+    "_meta": { "title": "EV+4 Bracket" }
+  },
+  "8": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["2", 4] },
+    "_meta": { "title": "EV-4 Bracket" }
+  }
+}

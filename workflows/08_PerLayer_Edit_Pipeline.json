@@ -1,0 +1,202 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "example.png" }
+  },
+  "10": {
+    "class_type": "SceneSegmenter",
+    "inputs": {
+      "image": ["1", 0],
+      "text_prompts": "sky, trees, ground, person, building, water",
+      "detection_backend": "auto",
+      "model_size": "large",
+      "auto_describe": true,
+      "detail_level": 0.6,
+      "min_area_percent": 1.0
+    }
+  },
+  "11": {
+    "class_type": "SegmentationPreview",
+    "inputs": {
+      "image": ["1", 0],
+      "masks": ["10", 0],
+      "layer_info": ["10", 2],
+      "overlay_opacity": 0.5,
+      "show_labels": true
+    }
+  },
+  "12": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["11", 0] },
+    "_meta": { "title": "Segmentation Map" }
+  },
+
+  "20": {
+    "class_type": "LayerSelector",
+    "inputs": {
+      "masks": ["10", 0],
+      "layer_info": ["10", 2],
+      "index": 0
+    },
+    "_meta": { "title": "Select Layer 0" }
+  },
+  "21": {
+    "class_type": "LayerSelector",
+    "inputs": {
+      "masks": ["10", 0],
+      "layer_info": ["10", 2],
+      "index": 1
+    },
+    "_meta": { "title": "Select Layer 1" }
+  },
+  "22": {
+    "class_type": "LayerSelector",
+    "inputs": {
+      "masks": ["10", 0],
+      "layer_info": ["10", 2],
+      "index": 2
+    },
+    "_meta": { "title": "Select Layer 2" }
+  },
+
+  "30": {
+    "class_type": "LayerDecomposer",
+    "inputs": {
+      "image": ["1", 0],
+      "masks": ["10", 0],
+      "layer_info": ["10", 2],
+      "feather_radius": 2
+    }
+  },
+
+  "40": {
+    "class_type": "LayerDetailEditor",
+    "inputs": {
+      "layer_image": ["1", 0],
+      "layer_mask": ["20", 0],
+      "layer_info_entry": ["20", 1],
+      "override_label": "",
+      "fractal_strength_mult": 1.2,
+      "smooth_strength_mult": 0.8,
+      "detail_prompt_override": "",
+      "skip_layer": false
+    },
+    "_meta": { "title": "Edit Layer 0 (boost fractal)" }
+  },
+  "41": {
+    "class_type": "LayerDetailEditor",
+    "inputs": {
+      "layer_image": ["1", 0],
+      "layer_mask": ["21", 0],
+      "layer_info_entry": ["21", 1],
+      "override_label": "",
+      "fractal_strength_mult": 1.0,
+      "smooth_strength_mult": 1.5,
+      "detail_prompt_override": "",
+      "skip_layer": false
+    },
+    "_meta": { "title": "Edit Layer 1 (smooth)" }
+  },
+  "42": {
+    "class_type": "LayerDetailEditor",
+    "inputs": {
+      "layer_image": ["1", 0],
+      "layer_mask": ["22", 0],
+      "layer_info_entry": ["22", 1],
+      "override_label": "",
+      "fractal_strength_mult": 0.8,
+      "smooth_strength_mult": 1.0,
+      "detail_prompt_override": "",
+      "skip_layer": false
+    },
+    "_meta": { "title": "Edit Layer 2 (subtle)" }
+  },
+
+  "50": {
+    "class_type": "LayerFractalProcessor",
+    "inputs": {
+      "layer_image": ["40", 0],
+      "layer_mask": ["40", 1],
+      "layer_label": ["40", 2],
+      "auto_params": true,
+      "seed": 42
+    },
+    "_meta": { "title": "Fractal Layer 0" }
+  },
+  "51": {
+    "class_type": "LayerFractalProcessor",
+    "inputs": {
+      "layer_image": ["41", 0],
+      "layer_mask": ["41", 1],
+      "layer_label": ["41", 2],
+      "auto_params": true,
+      "seed": 42
+    },
+    "_meta": { "title": "Fractal Layer 1" }
+  },
+  "52": {
+    "class_type": "LayerFractalProcessor",
+    "inputs": {
+      "layer_image": ["42", 0],
+      "layer_mask": ["42", 1],
+      "layer_label": ["42", 2],
+      "auto_params": true,
+      "seed": 42
+    },
+    "_meta": { "title": "Fractal Layer 2" }
+  },
+
+  "53": {
+    "class_type": "LayerDetailEnhancer",
+    "inputs": {
+      "layer_image": ["50", 0],
+      "detail_strength": 0.5,
+      "frequency_cutoff": 0.5,
+      "pyramid_levels": 4,
+      "mode": "auto_enhance",
+      "layer_mask": ["40", 1]
+    },
+    "_meta": { "title": "Enhance Layer 0 Detail" }
+  },
+
+  "60": {
+    "class_type": "LayerAssembler",
+    "inputs": {
+      "layers": ["53", 0],
+      "masks": ["10", 0],
+      "feather_radius": 3,
+      "output_colorspace": "passthrough",
+      "background_color": 0.0
+    }
+  },
+
+  "70": {
+    "class_type": "BitDepthValidator",
+    "inputs": {
+      "expanded_image": ["60", 0],
+      "original_image": ["1", 0],
+      "waveform_height": 256
+    }
+  },
+  "71": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["60", 0] },
+    "_meta": { "title": "Final Composite" }
+  },
+  "72": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["70", 1] },
+    "_meta": { "title": "Waveform QC" }
+  },
+  "80": {
+    "class_type": "SaveImageEXR",
+    "inputs": {
+      "image": ["60", 0],
+      "filename_prefix": "per_layer_edited",
+      "bit_depth": "32",
+      "compression": "PIZ",
+      "output_format": "Linear",
+      "input_is_linear": true
+    }
+  }
+}

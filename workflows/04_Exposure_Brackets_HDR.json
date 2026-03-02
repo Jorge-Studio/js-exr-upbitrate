@@ -1,0 +1,59 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "example.png"
+    }
+  },
+  "2": {
+    "class_type": "ExposureBracketGenerator",
+    "inputs": {
+      "image": ["1", 0],
+      "exposure_step": 2.0,
+      "method": "gamma_aware",
+      "clip_highlights": true,
+      "add_noise_to_darks": true,
+      "noise_amount": 0.002,
+      "seed": 42
+    }
+  },
+  "3": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["2", 0] },
+    "_meta": { "title": "EV +4" }
+  },
+  "4": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["2", 1] },
+    "_meta": { "title": "EV +2" }
+  },
+  "5": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["2", 2] },
+    "_meta": { "title": "EV 0 (Original)" }
+  },
+  "6": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["2", 3] },
+    "_meta": { "title": "EV -2" }
+  },
+  "7": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["2", 4] },
+    "_meta": { "title": "EV -4" }
+  },
+  "8": {
+    "class_type": "ExposureBracketToTIFF",
+    "inputs": {
+      "ev_plus_4": ["2", 0],
+      "ev_plus_2": ["2", 1],
+      "ev_0": ["2", 2],
+      "ev_minus_2": ["2", 3],
+      "ev_minus_4": ["2", 4],
+      "output_folder": "output/brackets",
+      "shot_name": "SHOT_001",
+      "bit_depth": "16",
+      "start_frame": 1001
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "1": {
+    "class_type": "LoadEXRSequence",
+    "inputs": {
+      "folder_path": "/workspace/exr_sequence",
+      "start_frame": 1001,
+      "frame_count": 120,
+      "skip_frames": 0
+    }
+  },
+  "2": {
+    "class_type": "LuminanceDeflicker",
+    "inputs": {
+      "images": ["1", 0],
+      "method": "gain_only",
+      "smoothing_window": 7,
+      "strength": 0.8,
+      "reference_frame": "average",
+      "protect_highlights": true,
+      "max_correction": 2.0
+    }
+  },
+  "3": {
+    "class_type": "NormalsDeflicker",
+    "inputs": {
+      "images": ["2", 0],
+      "gradient_smoothing": 0.3,
+      "temporal_radius": 2,
+      "preserve_luminance": true
+    }
+  },
+  "4": {
+    "class_type": "ColorSpaceConverter",
+    "inputs": {
+      "image": ["3", 0],
+      "input_space": "Linear",
+      "output_space": "ARRI LogC3"
+    }
+  },
+  "5": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": {
+      "images": ["4", 0],
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "deflickered_LogC3",
+      "format": "video/h265-crf",
+      "crf": 18,
+      "save_metadata": true
+    }
+  },
+  "6": {
+    "class_type": "ACESToRec709Preview",
+    "inputs": {
+      "image": ["2", 0],
+      "exposure": 0.0,
+      "gamma": 2.2
+    }
+  },
+  "7": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": {
+      "images": ["6", 0],
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "deflickered_Rec709_preview",
+      "format": "video/h265-crf",
+      "crf": 20,
+      "save_metadata": true
+    }
+  }
+}
