@@ -1,10 +1,10 @@
 """
-AI Scene Segmentation nodes for ComfyUI (v4.1 - SAM 3 Tiered System).
+AI Scene Segmentation nodes for ComfyUI (v4.1 - SAM 2.1 Tiered System).
 
 4-tier detection backend:
-  Tier 1 (sam3):       SAM 3 standalone via HuggingFace Transformers
-  Tier 2 (dinox_sam3): DINO-X cloud API detection + SAM 3 local masks
-  Tier 3 (gdino_sam3): Grounding DINO 1.0 local + SAM 3 local masks
+  Tier 1 (sam3):       SAM 2.1 automatic mask generation via HuggingFace Transformers
+  Tier 2 (dinox_sam3): DINO-X cloud API detection + SAM 2.1 local masks
+  Tier 3 (gdino_sam3): Grounding DINO 1.0 local + SAM 2.1 local masks
   Tier 4 (fallback):   Luminance/edge-based (no AI needed)
 
 SceneSegmenter outputs dynamic-length MASK lists (no fixed cap).
@@ -26,10 +26,15 @@ _HAS_SAM3 = False
 _sam3_model_cache = {}
 
 try:
-    from transformers import Sam3Processor, Sam3Model
+    from transformers import Sam2Processor, Sam2Model, pipeline as hf_pipeline
     _HAS_SAM3 = True
 except ImportError:
-    pass
+    try:
+        from transformers import Sam2Processor, Sam2Model
+        hf_pipeline = None
+        _HAS_SAM3 = True
+    except ImportError:
+        hf_pipeline = None
 
 # ---------------------------------------------------------------------------
 # Tier 2: DINO-X cloud API
@@ -86,26 +91,31 @@ def _mask_to_numpy(mask_tensor, h, w):
 
 
 def _load_sam3(model_size="large"):
-    """Load and cache SAM 3 model + processor."""
+    """Load and cache SAM 2.1 model + processor."""
     if model_size in _sam3_model_cache:
         return _sam3_model_cache[model_size]
 
     size_map = {
-        "large": "facebook/sam3",
-        "base_plus": "facebook/sam3",
-        "tiny": "facebook/sam3",
+        "large": "facebook/sam2.1-hiera-large",
+        "base_plus": "facebook/sam2.1-hiera-base-plus",
+        "tiny": "facebook/sam2.1-hiera-tiny",
     }
-    model_id = size_map.get(model_size, "facebook/sam3")
+    model_id = size_map.get(model_size, "facebook/sam2.1-hiera-large")
+
+    cache_dir = os.environ.get("HF_HOME", None)
+    if cache_dir is None and os.path.isdir("/workspace/models/sam2"):
+        cache_dir = "/workspace/models/sam2"
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[SAM3] Loading {model_id} ({model_size}) on {device}...")
+    print(f"[SAM2] Loading {model_id} ({model_size}) on {device}...")
 
-    model = Sam3Model.from_pretrained(model_id).to(device)
-    processor = Sam3Processor.from_pretrained(model_id)
+    kwargs = {"cache_dir": cache_dir} if cache_dir else {}
+    model = Sam2Model.from_pretrained(model_id, **kwargs).to(device)
+    processor = Sam2Processor.from_pretrained(model_id, **kwargs)
     model.eval()
 
     _sam3_model_cache[model_size] = (model, processor, device)
-    print(f"[SAM3] Model loaded successfully.")
+    print(f"[SAM2] Model loaded successfully.")
     return model, processor, device
 
 
@@ -236,53 +246,42 @@ class SceneSegmenter:
         return "fallback"
 
     # ------------------------------------------------------------------
-    # Tier 1: SAM 3 standalone
+    # Tier 1: SAM 2 automatic mask generation
     # ------------------------------------------------------------------
     def _sam3_segmentation(self, frame, prompts, model_size,
                            detail_level, min_area_pct, auto_describe):
         h, w = frame.shape[:2]
         total_pixels = h * w
         min_area = total_pixels * (min_area_pct / 100.0)
-        threshold = 0.3 + detail_level * 0.4
 
-        model, processor, device = _load_sam3(model_size)
         pil_image = PILImage.fromarray((frame * 255).clip(0, 255).astype(np.uint8))
-
-        if auto_describe:
-            prompts = ["things . stuff . objects"]
 
         masks = []
         labels = []
         scores_out = []
 
-        for prompt in prompts:
-            try:
-                inputs = processor(
-                    images=pil_image, text=prompt, return_tensors="pt"
-                ).to(device)
+        size_map = {
+            "large": "facebook/sam2.1-hiera-large",
+            "base_plus": "facebook/sam2.1-hiera-base-plus",
+            "tiny": "facebook/sam2.1-hiera-tiny",
+        }
+        model_id = size_map.get(model_size, "facebook/sam2.1-hiera-large")
 
-                with torch.no_grad():
-                    outputs = model(**inputs)
+        try:
+            if hf_pipeline is not None:
+                device_id = 0 if torch.cuda.is_available() else -1
+                ppb = max(8, int(32 * detail_level))
+                generator = hf_pipeline(
+                    "mask-generation", model=model_id,
+                    device=device_id, points_per_batch=ppb,
+                )
+                result = generator(pil_image, points_per_batch=ppb)
 
-                results = processor.post_process_instance_segmentation(
-                    outputs,
-                    threshold=threshold,
-                    mask_threshold=0.5,
-                    target_sizes=[(h, w)],
-                )[0]
+                raw_masks = result.get("masks", [])
+                raw_scores = result.get("scores", [])
 
-                result_masks = results.get("masks", [])
-                result_scores = results.get("scores", [])
-
-                if len(result_masks) == 0:
-                    if not auto_describe:
-                        masks.append(np.zeros((h, w), dtype=np.float32))
-                        labels.append(prompt)
-                        scores_out.append(0.0)
-                    continue
-
-                for i, m in enumerate(result_masks):
-                    mask_np = m.cpu().float().numpy().astype(np.float32)
+                for i, m in enumerate(raw_masks):
+                    mask_np = np.array(m, dtype=np.float32)
                     if mask_np.shape != (h, w):
                         from scipy.ndimage import zoom as scipy_zoom
                         mask_np = scipy_zoom(mask_np, (h / mask_np.shape[0], w / mask_np.shape[1]), order=1)
@@ -291,29 +290,80 @@ class SceneSegmenter:
                     if mask_np.sum() < min_area:
                         continue
 
-                    score = float(result_scores[i]) if i < len(result_scores) else 0.5
-
-                    if auto_describe:
-                        label, conf = _classify_mask_heuristic(mask_np, frame, h, w)
-                        score = max(score, conf)
-                    else:
-                        label = prompt
+                    score = float(raw_scores[i]) if i < len(raw_scores) else 0.5
+                    label, conf = _classify_mask_heuristic(mask_np, frame, h, w)
+                    score = max(score, conf)
 
                     masks.append(mask_np)
                     labels.append(label)
                     scores_out.append(score)
+            else:
+                model, processor, device = _load_sam3(model_size)
+                grid_size = max(4, int(8 * detail_level))
+                points = []
+                for gy in range(grid_size):
+                    for gx in range(grid_size):
+                        px = int((gx + 0.5) / grid_size * w)
+                        py = int((gy + 0.5) / grid_size * h)
+                        points.append([px, py])
 
-            except Exception as e:
-                print(f"[SceneSegmenter] SAM 3 error for '{prompt}': {e}")
-                if not auto_describe:
-                    masks.append(np.zeros((h, w), dtype=np.float32))
-                    labels.append(prompt)
-                    scores_out.append(0.0)
+                for pt in points:
+                    try:
+                        input_points = [[[[pt[0], pt[1]]]]]
+                        input_labels = [[[1]]]
+                        inputs = processor(
+                            images=pil_image,
+                            input_points=input_points,
+                            input_labels=input_labels,
+                            return_tensors="pt",
+                        ).to(device)
+
+                        with torch.no_grad():
+                            outputs = model(**inputs)
+
+                        pred_masks = processor.post_process_masks(
+                            outputs.pred_masks.cpu(),
+                            inputs["original_sizes"],
+                        )
+
+                        if len(pred_masks) > 0 and pred_masks[0].shape[0] > 0:
+                            best_idx = outputs.iou_scores.squeeze().argmax().item()
+                            m = pred_masks[0][0, best_idx].float().numpy()
+                            if m.shape != (h, w):
+                                from scipy.ndimage import zoom as scipy_zoom
+                                m = scipy_zoom(m, (h / m.shape[0], w / m.shape[1]), order=1)
+                            m = (m > 0.5).astype(np.float32)
+
+                            if m.sum() >= min_area:
+                                is_duplicate = False
+                                for existing in masks:
+                                    iou = (m * existing).sum() / max((m + existing - m * existing).sum(), 1)
+                                    if iou > 0.8:
+                                        is_duplicate = True
+                                        break
+                                if not is_duplicate:
+                                    label, conf = _classify_mask_heuristic(m, frame, h, w)
+                                    masks.append(m)
+                                    labels.append(label)
+                                    scores_out.append(conf)
+                    except Exception:
+                        continue
+
+        except Exception as e:
+            print(f"[SceneSegmenter] SAM 2 auto-mask error: {e}")
+            return self._fallback_segmentation(
+                frame, prompts, min_area_pct, detail_level, auto_describe
+            )
+
+        if len(masks) == 0:
+            return self._fallback_segmentation(
+                frame, prompts, min_area_pct, detail_level, auto_describe
+            )
 
         return masks, labels, scores_out
 
     # ------------------------------------------------------------------
-    # Tier 2: DINO-X cloud + SAM 3 refinement
+    # Tier 2: DINO-X cloud + SAM 2 refinement
     # ------------------------------------------------------------------
     def _dinox_sam3_segmentation(self, frame, prompts, api_key, model_size,
                                  detail_level, min_area_pct, auto_describe):
@@ -348,7 +398,7 @@ class SceneSegmenter:
             result = task.result
 
             if not result or not hasattr(result, "objects"):
-                print("[SceneSegmenter] DINO-X returned no objects, falling back to SAM 3")
+                print("[SceneSegmenter] DINO-X returned no objects, falling back to SAM 2")
                 return self._sam3_segmentation(
                     frame, prompts, model_size, detail_level, min_area_pct, auto_describe
                 )
@@ -363,27 +413,25 @@ class SceneSegmenter:
                 if score < 0.2:
                     continue
 
-                box_xyxy = [[list(box)]]
-                box_labels = [[1]]
+                input_boxes = [[list(box)]]
 
                 inputs = processor(
                     images=pil_image,
-                    input_boxes=box_xyxy,
-                    input_boxes_labels=box_labels,
+                    input_boxes=input_boxes,
                     return_tensors="pt",
                 ).to(device)
 
                 with torch.no_grad():
                     outputs = model(**inputs)
 
-                pred_masks = processor.image_processor.post_process_masks(
+                pred_masks = processor.post_process_masks(
                     outputs.pred_masks.cpu(),
-                    inputs["original_sizes"].cpu(),
-                    inputs["reshaped_input_sizes"].cpu(),
+                    inputs["original_sizes"],
                 )
 
-                if len(pred_masks) > 0 and len(pred_masks[0]) > 0:
-                    best_mask = pred_masks[0][0][0].float().numpy()
+                if len(pred_masks) > 0 and pred_masks[0].shape[0] > 0:
+                    best_idx = outputs.iou_scores.squeeze().argmax().item() if outputs.iou_scores.numel() > 1 else 0
+                    best_mask = pred_masks[0][0, best_idx].float().numpy()
                     if best_mask.shape != (h, w):
                         from scipy.ndimage import zoom as scipy_zoom
                         best_mask = scipy_zoom(best_mask, (h / best_mask.shape[0], w / best_mask.shape[1]), order=1)
@@ -398,7 +446,7 @@ class SceneSegmenter:
                 os.remove(tmp_path)
 
         except Exception as e:
-            print(f"[SceneSegmenter] DINO-X error: {e}, falling back to SAM 3")
+            print(f"[SceneSegmenter] DINO-X error: {e}, falling back to SAM 2")
             return self._sam3_segmentation(
                 frame, prompts, model_size, detail_level, min_area_pct, auto_describe
             )
@@ -406,7 +454,7 @@ class SceneSegmenter:
         return masks, labels, scores_out
 
     # ------------------------------------------------------------------
-    # Tier 3: Legacy Grounding DINO 1.0 + SAM 3 masks
+    # Tier 3: Legacy Grounding DINO 1.0 + SAM 2 masks
     # ------------------------------------------------------------------
     def _gdino_sam3_segmentation(self, frame, prompts, model_size,
                                   detail_level, min_area_pct, auto_describe):
@@ -451,27 +499,25 @@ class SceneSegmenter:
                 if _HAS_SAM3:
                     for box in boxes:
                         box_np = box.cpu().numpy() * np.array([w, h, w, h])
-                        box_xyxy = [[box_np.tolist()]]
-                        box_labels_list = [[1]]
+                        input_boxes = [[box_np.tolist()]]
 
                         inputs = processor(
                             images=pil_image,
-                            input_boxes=box_xyxy,
-                            input_boxes_labels=box_labels_list,
+                            input_boxes=input_boxes,
                             return_tensors="pt",
                         ).to(device)
 
                         with torch.no_grad():
                             outputs = model(**inputs)
 
-                        pred_masks = processor.image_processor.post_process_masks(
+                        pred_masks = processor.post_process_masks(
                             outputs.pred_masks.cpu(),
-                            inputs["original_sizes"].cpu(),
-                            inputs["reshaped_input_sizes"].cpu(),
+                            inputs["original_sizes"],
                         )
 
-                        if len(pred_masks) > 0 and len(pred_masks[0]) > 0:
-                            m = pred_masks[0][0][0].float().numpy()
+                        if len(pred_masks) > 0 and pred_masks[0].shape[0] > 0:
+                            best_idx = outputs.iou_scores.squeeze().argmax().item() if outputs.iou_scores.numel() > 1 else 0
+                            m = pred_masks[0][0, best_idx].float().numpy()
                             if m.shape != (h, w):
                                 from scipy.ndimage import zoom as scipy_zoom
                                 m = scipy_zoom(m, (h / m.shape[0], w / m.shape[1]), order=1)
@@ -489,7 +535,7 @@ class SceneSegmenter:
                 scores_out.append(score)
 
             except Exception as e:
-                print(f"[SceneSegmenter] GDINO+SAM3 error for '{prompt}': {e}")
+                print(f"[SceneSegmenter] GDINO+SAM2 error for '{prompt}': {e}")
                 if not auto_describe:
                     masks.append(np.zeros((h, w), dtype=np.float32))
                     labels.append(prompt)
