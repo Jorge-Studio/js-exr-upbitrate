@@ -1,0 +1,63 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "FF_Train_01.png"
+    }
+  },
+  "2": {
+    "class_type": "PrepareImageHighBitDepth",
+    "inputs": {
+      "image": ["1", 0],
+      "input_is_srgb": true,
+      "add_headroom": 0.1,
+      "deband_strength": 1.0
+    }
+  },
+  "3": {
+    "class_type": "AnimatedPanAndScan",
+    "inputs": {
+      "images": ["2", 0],
+      "output_size": "1080p (1920×1080)",
+      "custom_width": 1920,
+      "custom_height": 1080,
+      "start_x": 0,
+      "start_y": 0,
+      "start_zoom": 1.0,
+      "end_x": 200,
+      "end_y": 50,
+      "end_zoom": 1.3,
+      "easing": "ease_in_out",
+      "loop_mode": "none",
+      "start_frame": 0,
+      "end_frame": 47,
+      "rotation_start": 0.0,
+      "rotation_end": 0.0
+    },
+    "_meta": { "title": "Animate 48 frames (2s @ 24fps)" }
+  },
+  "4": {
+    "class_type": "HighBitDepthVideoEncoder",
+    "inputs": {
+      "images": ["3", 0],
+      "filename_prefix": "V01_FFV1_16bit",
+      "codec": "FFV1 16-bit Lossless (MKV)",
+      "frame_rate": 24.0,
+      "quality": 0
+    },
+    "_meta": { "title": "FFV1 16-bit Lossless Output" }
+  },
+  "5": {
+    "class_type": "ImageStats",
+    "inputs": {
+      "image": ["3", 0]
+    }
+  },
+  "6": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": ["3", 0]
+    },
+    "_meta": { "title": "Animation Preview" }
+  }
+}

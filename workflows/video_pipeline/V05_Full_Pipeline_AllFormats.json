@@ -1,0 +1,208 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "FF_Train_01.png"
+    }
+  },
+
+  "10": {
+    "class_type": "PrepareImageHighBitDepth",
+    "inputs": {
+      "image": ["1", 0],
+      "input_is_srgb": true,
+      "add_headroom": 0.1,
+      "deband_strength": 1.0
+    }
+  },
+
+  "15": {
+    "class_type": "ShadowCurveProcessor",
+    "inputs": {
+      "image": ["10", 0],
+      "shadow_power": 2.0,
+      "shadow_threshold": 0.15,
+      "blend_width": 0.1,
+      "preserve_color": true,
+      "input_colorspace": "Linear"
+    }
+  },
+
+  "20": {
+    "class_type": "AnimatedPanAndScan",
+    "inputs": {
+      "images": ["15", 0],
+      "output_size": "1080p (1920×1080)",
+      "custom_width": 1920,
+      "custom_height": 1080,
+      "start_x": -100,
+      "start_y": -30,
+      "start_zoom": 1.1,
+      "end_x": 100,
+      "end_y": 30,
+      "end_zoom": 1.4,
+      "easing": "ease_in_out",
+      "loop_mode": "none",
+      "start_frame": 0,
+      "end_frame": 31,
+      "rotation_start": -1.0,
+      "rotation_end": 1.0
+    },
+    "_meta": { "title": "Create 32 frames @ 16fps" }
+  },
+
+  "25": {
+    "class_type": "FrameInterpolator",
+    "inputs": {
+      "images": ["20", 0],
+      "source_fps": 16.0,
+      "target_fps": 24.0,
+      "method": "optical_flow"
+    },
+    "_meta": { "title": "16fps → 24fps" }
+  },
+
+  "30": {
+    "class_type": "TemporalFractalExpander",
+    "inputs": {
+      "images": ["25", 0],
+      "target_bit_depth": "32",
+      "fractal_octaves": 5,
+      "fractal_persistence": 0.5,
+      "gradient_smoothness": 0.7,
+      "temporal_coherence": 0.9,
+      "motion_compensation": true,
+      "seed": 42
+    },
+    "_meta": { "title": "Temporal Fractal 8-bit → 32-bit" }
+  },
+
+  "35": {
+    "class_type": "ColorGradingController",
+    "inputs": {
+      "image": ["30", 0],
+      "exposure": 0.0,
+      "contrast": 1.0,
+      "lift": 0.0,
+      "gamma": 1.0,
+      "gain": 1.0,
+      "saturation": 1.0,
+      "input_is_linear": true
+    }
+  },
+
+  "40": {
+    "class_type": "HDRCurveEditor",
+    "inputs": {
+      "image": ["35", 0],
+      "shadows": 0.0,
+      "midtones": 0.0,
+      "highlights": 0.0,
+      "whites": 0.0,
+      "blacks": 0.0
+    }
+  },
+
+  "45": {
+    "class_type": "ColorMatchToReference",
+    "inputs": {
+      "processed_image": ["40", 0],
+      "reference_image": ["1", 0],
+      "match_luminance": true,
+      "match_contrast": true,
+      "match_colors": true,
+      "strength": 0.5,
+      "preserve_hdr_headroom": true
+    },
+    "_meta": { "title": "Match back to original palette" }
+  },
+
+  "50": {
+    "class_type": "HighBitDepthVideoEncoder",
+    "inputs": {
+      "images": ["45", 0],
+      "filename_prefix": "V05_Full_FFV1",
+      "codec": "FFV1 16-bit Lossless (MKV)",
+      "frame_rate": 24.0,
+      "quality": 0
+    },
+    "_meta": { "title": "FFV1 16-bit Lossless" }
+  },
+
+  "51": {
+    "class_type": "HighBitDepthVideoEncoder",
+    "inputs": {
+      "images": ["45", 0],
+      "filename_prefix": "V05_Full_ProRes4444XQ",
+      "codec": "ProRes 4444 XQ (MOV)",
+      "frame_rate": 24.0,
+      "quality": 3
+    },
+    "_meta": { "title": "ProRes 4444 XQ" }
+  },
+
+  "52": {
+    "class_type": "HighBitDepthVideoEncoder",
+    "inputs": {
+      "images": ["45", 0],
+      "filename_prefix": "V05_Full_H265_HDR10",
+      "codec": "H.265 HDR10 (MP4)",
+      "frame_rate": 24.0,
+      "quality": 18
+    },
+    "_meta": { "title": "H.265 HDR10" }
+  },
+
+  "55": {
+    "class_type": "SaveVideoEXRSequence",
+    "inputs": {
+      "images": ["45", 0],
+      "filename_prefix": "V05_Full_EXR_Seq",
+      "bit_depth": "32",
+      "compression": "piz",
+      "output_format": "Linear",
+      "input_is_linear": true
+    },
+    "_meta": { "title": "32-bit EXR Sequence" }
+  },
+
+  "60": {
+    "class_type": "BitDepthValidator",
+    "inputs": {
+      "expanded_image": ["45", 0],
+      "original_image": ["1", 0],
+      "waveform_height": 256
+    }
+  },
+
+  "65": {
+    "class_type": "ImageStats",
+    "inputs": {
+      "image": ["45", 0]
+    }
+  },
+
+  "70": {
+    "class_type": "Rec709Converter",
+    "inputs": {
+      "image": ["45", 0],
+      "source_colorspace": "Linear sRGB",
+      "target_colorspace": "Rec.709",
+      "chromatic_adaptation": "Bradford"
+    }
+  },
+  "71": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": ["70", 0]
+    },
+    "_meta": { "title": "Rec.709 Preview" }
+  },
+  "72": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": ["60", 1]
+    },
+    "_meta": { "title": "Waveform QC" }
+  }
+}

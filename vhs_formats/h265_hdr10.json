@@ -1,0 +1,4 @@
+{
+  "main_pass": ["-pix_fmt", "yuv444p10le", "-c:v", "libx265", "-preset", "slow", "-crf", "18", "-x265-params", "colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc", "-tag:v", "hvc1"],
+  "extension": "mp4"
+}

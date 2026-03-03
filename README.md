@@ -1,6 +1,6 @@
-# JS EXR Upbitrate — Cinema-Grade Bit-Depth & AI Segmentation for ComfyUI (v4.2)
+# JS EXR Upbitrate — Cinema-Grade Bit-Depth, Video Pipeline & AI Segmentation for ComfyUI (v5.0)
 
-Professional-grade EXR export with **SAM 2.1 Tiered AI Segmentation**, **Fractal Bit-Depth Expansion**, **Per-Layer Editing**, **Log format support**, **color grading controls**, **cinema delivery compliance**, **motion animation**, **luminance-preserving deflicker**, and **maximum tonal precision** for VFX, film, compositing, and color grading workflows.
+Professional-grade EXR/video export with **High Bit-Depth Video Encoding** (FFV1 16-bit, ProRes 4444, H.265 HDR10), **Temporal Fractal Expansion**, **Frame Interpolation**, **SAM 2.1 AI Segmentation**, **Fractal Bit-Depth Expansion**, **Per-Layer Editing**, **Log format support**, **color grading controls**, **cinema delivery compliance**, **motion animation**, **luminance-preserving deflicker**, and **maximum tonal precision** for VFX, film, compositing, and color grading workflows.
 
 ---
 
@@ -10,12 +10,21 @@ Professional-grade EXR export with **SAM 2.1 Tiered AI Segmentation**, **Fractal
 cd ComfyUI/custom_nodes
 git clone https://github.com/Jorge-Studio/js-exr-upbitrate.git
 cd js-exr-upbitrate
-git checkout layering-test
+git checkout exr-to-video
 pip install -r requirements.txt
 # Restart ComfyUI
 ```
 
 Then drag any workflow from `workflows/` into ComfyUI.
+
+### Install Video Generation Models (optional)
+
+```bash
+cd ComfyUI/custom_nodes/js-exr-upbitrate
+bash install_video_models.sh all
+```
+
+This downloads WAN 2.1 I2V, LTX-Video 2, HunyuanVideo, and SeedVR2 upscaler models (~50 GB total).
 
 ---
 
@@ -54,6 +63,67 @@ Start with 01 and work your way up. Each builds on the previous.
 | 10 | `10_Ultimate_Pipeline.json` | 18 | Everything combined: shadow control + AI segmentation + fractal + grading + curves + color match + QC |
 
 All workflows are validated and tested against a running ComfyUI instance.
+
+---
+
+## NEW: Video Pipeline Workflows (v5.0)
+
+Located in `workflows/video_pipeline/`:
+
+| # | Workflow | What It Does |
+|---|---------|-------------|
+| V01 | `V01_EXR_to_FFV1_16bit.json` | Animate a still image (pan+zoom) → export as FFV1 16-bit lossless MKV |
+| V02 | `V02_EXR_to_ProRes4444.json` | Animate + grade → export as both ProRes 4444 and ProRes 4444 XQ |
+| V03 | `V03_Temporal_Fractal_Expand.json` | Animate → temporal fractal expansion (motion-compensated) → FFV1 + EXR sequence |
+| V04 | `V04_Frame_Interpolation_Test.json` | Animate @ 16fps → interpolate to 24fps → compare original vs interpolated |
+| V05 | `V05_Full_Pipeline_AllFormats.json` | Full pipeline: prep → shadow control → animate → interpolate → temporal fractal → grade → FFV1 + ProRes + H.265 + EXR sequence |
+
+### New Nodes in v5.0
+
+| Node | Category | Description |
+|------|----------|-------------|
+| **HighBitDepthVideoEncoder** | image/video | Pipes 32-bit float tensors to ffmpeg at full precision. Outputs: FFV1 16-bit MKV, ProRes 4444/XQ MOV, H.265 HDR10 MP4, AV1 12-bit MKV |
+| **TemporalFractalExpander** | image/bitdepth | Motion-compensated fractal bit-depth expansion for video. Uses optical flow to warp noise fields so detail stays locked to scene content |
+| **FrameInterpolator** | image/video | Converts frame rates (e.g., 16fps → 24fps) using optical flow or simple blending |
+
+### Bit-Depth Reality Check
+
+| Format | Actual Bit Depth | Lossless? | Playable In |
+|--------|-----------------|-----------|-------------|
+| **FFV1 (MKV)** | 16-bit integer | Yes, truly lossless | VLC, mpv, Resolve |
+| **EXR Sequence** | 32-bit float | Yes | Nuke, Resolve, RV |
+| **ProRes 4444 XQ (MOV)** | 10-bit (ffmpeg limit; spec says 12) | Visually lossless | All NLEs |
+| **H.265 HDR10 (MP4)** | 10-bit | Lossy | Everywhere |
+| **AV1 12-bit (MKV)** | 12-bit | Lossy | Modern players |
+
+**FFV1 is the true high-bit-depth video format** — 16-bit lossless in a playable file. ProRes 4444 is 10-bit via ffmpeg but remains the NLE industry standard.
+
+### VHS Format Files
+
+Drop-in JSON files for VHS_VideoCombine (in `vhs_formats/`):
+- `ffv1_16bit.json` — FFV1 16-bit lossless MKV
+- `prores_4444.json` — ProRes 4444 MOV
+- `prores_4444_xq.json` — ProRes 4444 XQ MOV
+- `h265_hdr10.json` — H.265 HDR10 MP4
+
+Copy these to `ComfyUI/custom_nodes/ComfyUI-VideoHelperSuite/video_formats/` to add them to VHS_VideoCombine's format dropdown.
+
+### Video Model Installation
+
+Run the installer to download AI video generation models:
+
+```bash
+bash install_video_models.sh all
+```
+
+| Model | Size | VRAM (24GB GPU) | Purpose |
+|-------|------|----------------|---------|
+| WAN 2.1 I2V 14B | ~16 GB | 18-22 GB | Image-to-video generation |
+| LTX-Video 2B | ~4 GB | 8-12 GB | Fast image-to-video |
+| HunyuanVideo (fp8) | ~14 GB | 16-20 GB | High-quality video gen |
+| SeedVR2 | ~7 GB | 12-16 GB | Video upscaling to 4K/8K |
+
+Models run one at a time, so 24GB VRAM is sufficient for all.
 
 ---
 
@@ -265,7 +335,7 @@ Verify Input Color Space matches export format. For ACES 2065-1 output, set Inpu
 
 ```
 js-exr-upbitrate/
-  __init__.py                 # Core nodes + registration (37 nodes)
+  __init__.py                 # Core nodes + registration (42 nodes)
   fractal_utils.py            # Fractal math (LFD, fBm, Hermite, blue noise)
   fractal_bitdepth.py         # FractalBitDepthExpander, PerceptualDither
   scene_segmentation.py       # SceneSegmenter (SAM 2.1 tiered), LayerSelector,

@@ -1,0 +1,89 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "FF_Train_01.png"
+    }
+  },
+  "2": {
+    "class_type": "AnimatedPanAndScan",
+    "inputs": {
+      "images": ["1", 0],
+      "output_size": "1080p (1920×1080)",
+      "custom_width": 1920,
+      "custom_height": 1080,
+      "start_x": 0,
+      "start_y": 0,
+      "start_zoom": 1.0,
+      "end_x": 150,
+      "end_y": 0,
+      "end_zoom": 1.5,
+      "easing": "linear",
+      "loop_mode": "none",
+      "start_frame": 0,
+      "end_frame": 47,
+      "rotation_start": 0.0,
+      "rotation_end": 0.0
+    },
+    "_meta": { "title": "Generate 48-frame zoom sequence" }
+  },
+  "3": {
+    "class_type": "TemporalFractalExpander",
+    "inputs": {
+      "images": ["2", 0],
+      "target_bit_depth": "32",
+      "fractal_octaves": 6,
+      "fractal_persistence": 0.5,
+      "gradient_smoothness": 0.7,
+      "temporal_coherence": 0.9,
+      "motion_compensation": true,
+      "seed": 42
+    },
+    "_meta": { "title": "Temporal Fractal Expansion (motion-compensated)" }
+  },
+  "4": {
+    "class_type": "BitDepthValidator",
+    "inputs": {
+      "expanded_image": ["3", 0],
+      "original_image": ["2", 0],
+      "waveform_height": 256
+    }
+  },
+  "5": {
+    "class_type": "HighBitDepthVideoEncoder",
+    "inputs": {
+      "images": ["3", 0],
+      "filename_prefix": "V03_Temporal_Fractal_FFV1",
+      "codec": "FFV1 16-bit Lossless (MKV)",
+      "frame_rate": 24.0,
+      "quality": 0
+    },
+    "_meta": { "title": "FFV1 16-bit Output" }
+  },
+  "6": {
+    "class_type": "SaveVideoEXRSequence",
+    "inputs": {
+      "images": ["3", 0],
+      "filename_prefix": "V03_Temporal_Fractal_EXR",
+      "bit_depth": "32",
+      "compression": "piz",
+      "output_format": "Linear",
+      "input_is_linear": true
+    },
+    "_meta": { "title": "32-bit EXR Sequence Output" }
+  },
+  "7": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": ["3", 0]
+    },
+    "_meta": { "title": "Expanded Frames Preview" }
+  },
+  "8": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": ["4", 1]
+    },
+    "_meta": { "title": "Waveform QC" }
+  }
+}

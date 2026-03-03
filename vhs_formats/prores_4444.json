@@ -1,0 +1,4 @@
+{
+  "main_pass": ["-pix_fmt", "yuv444p10le", "-c:v", "prores_ks", "-profile:v", "4", "-vendor", "apl0", "-qscale:v", "5"],
+  "extension": "mov"
+}

@@ -1332,6 +1332,18 @@ from .layer_assembly import (
     LAYER_ASSEMBLY_NODES,
     LAYER_ASSEMBLY_DISPLAY_NAMES,
 )
+from .video_encoder import (
+    VIDEO_ENCODER_NODES,
+    VIDEO_ENCODER_DISPLAY_NAMES,
+)
+from .temporal_fractal import (
+    TEMPORAL_FRACTAL_NODES,
+    TEMPORAL_FRACTAL_DISPLAY_NAMES,
+)
+from .frame_interpolator import (
+    FRAME_INTERP_NODES,
+    FRAME_INTERP_DISPLAY_NAMES,
+)
 
 # =============================================================================
 # NODE MAPPINGS
@@ -1380,6 +1392,15 @@ NODE_CLASS_MAPPINGS.update(AI_DETAIL_NODES)
 # Add Layer Assembly nodes
 NODE_CLASS_MAPPINGS.update(LAYER_ASSEMBLY_NODES)
 
+# Add Video Encoder nodes
+NODE_CLASS_MAPPINGS.update(VIDEO_ENCODER_NODES)
+
+# Add Temporal Fractal nodes
+NODE_CLASS_MAPPINGS.update(TEMPORAL_FRACTAL_NODES)
+
+# Add Frame Interpolator nodes
+NODE_CLASS_MAPPINGS.update(FRAME_INTERP_NODES)
+
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ColorSpaceConverter": "Color Space Converter",
     "ColorGradingController": "Color Grading Controller",
@@ -1422,6 +1443,15 @@ NODE_DISPLAY_NAME_MAPPINGS.update(AI_DETAIL_DISPLAY_NAMES)
 
 # Add Layer Assembly display names
 NODE_DISPLAY_NAME_MAPPINGS.update(LAYER_ASSEMBLY_DISPLAY_NAMES)
+
+# Add Video Encoder display names
+NODE_DISPLAY_NAME_MAPPINGS.update(VIDEO_ENCODER_DISPLAY_NAMES)
+
+# Add Temporal Fractal display names
+NODE_DISPLAY_NAME_MAPPINGS.update(TEMPORAL_FRACTAL_DISPLAY_NAMES)
+
+# Add Frame Interpolator display names
+NODE_DISPLAY_NAME_MAPPINGS.update(FRAME_INTERP_DISPLAY_NAMES)
 
 WEB_DIRECTORY = "./js"
 
